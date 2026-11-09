@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { HistoryAction } from '@shared/types/entities'
 import type { Db } from './connection'
 import type { Repositories } from '../repositories'
@@ -22,6 +23,7 @@ export interface AuditedChange<T> {
  * データ変更と操作履歴の保存を 1 つのトランザクションで実行する（仕様 §14）。
  * fn が返した変更内容を履歴に記録する。fn または履歴記録のどちらかが失敗すると全体がロールバックされる。
  * BEGIN IMMEDIATE を使い、書き込みロックを先に確保する。
+ * 1 回の呼び出しで記録される履歴行には同じ operation_group を付け、UNDO の単位とする（D-017）。
  */
 export function runAudited<R, T>(
   db: Db,
@@ -32,6 +34,7 @@ export function runAudited<R, T>(
   return db
     .transaction(() => {
       const { result, changes } = fn()
+      const operationGroup = randomUUID()
       for (const c of changes) {
         repos.history.record({
           eventId: ctx.eventId,
@@ -42,7 +45,8 @@ export function runAudited<R, T>(
           before: c.before,
           after: c.after,
           undoOfHistoryId: c.undoOfHistoryId ?? null,
-          note: c.note ?? null
+          note: c.note ?? null,
+          operationGroup
         })
       }
       return result

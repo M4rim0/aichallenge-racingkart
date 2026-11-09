@@ -61,6 +61,22 @@ export function registerIpcHandlers(ctx: AppContext): void {
   handle(IpcChannel.raceCorrectStart, (eventId: unknown, at: unknown) =>
     ctx.raceClock.correctActualStart(asId(eventId, 'eventId'), at as number)
   )
+
+  handle(IpcChannel.lapsList, (eventId: unknown) => ctx.laps.list(asId(eventId, 'eventId')))
+  handle(IpcChannel.lapsRegister, (eventId: unknown) => ctx.laps.register(asId(eventId, 'eventId')))
+  handle(IpcChannel.lapsAddPast, (eventId: unknown, at: unknown) => ctx.laps.addPast(asId(eventId, 'eventId'), at as number))
+  handle(IpcChannel.lapsUpdate, (recordId: unknown, at: unknown) => ctx.laps.updatePassedAt(asId(recordId, 'recordId'), at as number))
+  handle(IpcChannel.lapsDelete, (recordId: unknown) => {
+    ctx.laps.delete(asId(recordId, 'recordId'))
+    return null
+  })
+  handle(IpcChannel.undoPeek, (eventId: unknown) => ctx.undo.peek(asId(eventId, 'eventId')))
+  handle(IpcChannel.undoRun, (eventId: unknown, group: unknown) => {
+    if (typeof group !== 'string' || group === '') {
+      throw new AppError(ErrorCode.VALIDATION, '取り消し対象が指定されていません')
+    }
+    return ctx.undo.undo(asId(eventId, 'eventId'), group)
+  })
 }
 
 function asImpact(v: unknown): TeamDeletionImpact {

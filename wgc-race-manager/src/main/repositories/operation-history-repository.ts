@@ -17,6 +17,7 @@ export interface HistoryRecordInput {
   after: unknown
   undoOfHistoryId?: number | null
   note?: string | null
+  operationGroup?: string | null
 }
 
 /**
@@ -49,7 +50,8 @@ export class OperationHistoryRepository extends BaseRepository<
         afterJson: 'after_json',
         undoOfHistoryId: 'undo_of_history_id',
         note: 'note',
-        bootSessionId: 'boot_session_id'
+        bootSessionId: 'boot_session_id',
+        operationGroup: 'operation_group'
       },
       insertable: [],
       updatable: [],
@@ -65,8 +67,8 @@ export class OperationHistoryRepository extends BaseRepository<
       .prepare(
         `INSERT INTO operation_history
          (event_id, operator_id, operator_name_snapshot, operated_at, action, target_table, target_id,
-          before_json, after_json, undo_of_history_id, note, boot_session_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          before_json, after_json, undo_of_history_id, note, boot_session_id, operation_group)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         input.eventId,
@@ -80,7 +82,8 @@ export class OperationHistoryRepository extends BaseRepository<
         input.after === null || input.after === undefined ? null : JSON.stringify(input.after),
         input.undoOfHistoryId ?? null,
         input.note ?? null,
-        this.bootSessionId
+        this.bootSessionId,
+        input.operationGroup ?? null
       )
     return this.getById(Number(info.lastInsertRowid))
   }
@@ -91,6 +94,21 @@ export class OperationHistoryRepository extends BaseRepository<
 
   listByEvent(eventId: number): OperationHistoryEntry[] {
     return this.list('event_id = ?', [eventId], {})
+  }
+
+  /** 大会の履歴を新しい順に */
+  listByEventDesc(eventId: number): OperationHistoryEntry[] {
+    return (
+      this.db.prepare(`${this.selectSql()} WHERE event_id = ? ORDER BY id DESC`).all(eventId) as Record<string, unknown>[]
+    ).map((r) => this.mapRow(r) as OperationHistoryEntry)
+  }
+
+  /** 指定した履歴行を取り消した UNDO 行が存在するか */
+  isUndone(historyId: number): boolean {
+    return (
+      this.db.prepare(`SELECT 1 FROM operation_history WHERE undo_of_history_id = ? LIMIT 1`).get(historyId) !==
+      undefined
+    )
   }
 
   listAll(): OperationHistoryEntry[] {

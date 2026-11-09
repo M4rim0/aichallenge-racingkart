@@ -6,6 +6,8 @@ import { EventService } from './services/event-service'
 import { OperatorContext } from './services/operator-context'
 import { RaceClockService } from './services/race-clock-service'
 import { TeamService } from './services/team-service'
+import { LapService } from './services/lap-service'
+import { UndoService } from './services/undo-service'
 
 export interface AppContext {
   db: Db
@@ -15,6 +17,8 @@ export interface AppContext {
   events: EventService
   teams: TeamService
   raceClock: RaceClockService
+  laps: LapService
+  undo: UndoService
   /** この起動セッションの情報（PC 時刻異常の有無を含む）。未登録なら null */
   session: AppSession | null
 }
@@ -31,6 +35,8 @@ export function createAppContext(db: Db, clock: MasterClock, session: AppSession
     session,
     events: new EventService(db, repos, operator),
     teams: new TeamService(db, repos, operator),
-    raceClock: new RaceClockService(db, repos, clock, operator)
+    raceClock: new RaceClockService(db, repos, clock, operator),
+    laps: new LapService(db, repos, clock, operator),
+    undo: new UndoService(db, repos, operator)
   }
 }

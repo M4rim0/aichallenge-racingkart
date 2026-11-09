@@ -4,7 +4,7 @@
  * データ操作系はすべて Result<T> を返し、例外は投げない。
  */
 import type { Result } from './errors'
-import type { AppSession, RaceEvent, Team } from './types/entities'
+import type { AppSession, LapView, RaceEvent, Team } from './types/entities'
 import type { RaceClockSnapshot } from './time/race-clock'
 import type {
   EventCreateInput,
@@ -31,7 +31,14 @@ export const IpcChannel = {
   racePause: 'race:pause',
   raceResume: 'race:resume',
   raceEnd: 'race:end',
-  raceCorrectStart: 'race:correct-start'
+  raceCorrectStart: 'race:correct-start',
+  lapsList: 'laps:list',
+  lapsRegister: 'laps:register',
+  lapsAddPast: 'laps:add-past',
+  lapsUpdate: 'laps:update',
+  lapsDelete: 'laps:delete',
+  undoPeek: 'undo:peek',
+  undoRun: 'undo:run'
 } as const
 
 export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]
@@ -68,6 +75,14 @@ export interface ClockStatus {
   session: AppSession | null
 }
 
+export interface UndoCandidate {
+  operationGroup: string
+  description: string
+  operatedAt: number
+  operatorName: string | null
+  historyIds: number[]
+}
+
 /** preload が window.wgc として公開する API */
 export interface WgcApi {
   app: {
@@ -97,5 +112,16 @@ export interface WgcApi {
     resume(eventId: number): Promise<Result<RaceClockSnapshot>>
     end(eventId: number): Promise<Result<RaceClockSnapshot>>
     correctStart(eventId: number, actualStartAt: number): Promise<Result<RaceClockSnapshot>>
+  }
+  laps: {
+    list(eventId: number): Promise<Result<LapView[]>>
+    register(eventId: number): Promise<Result<LapView>>
+    addPast(eventId: number, passedAt: number): Promise<Result<LapView>>
+    update(recordId: number, passedAt: number): Promise<Result<LapView>>
+    delete(recordId: number): Promise<Result<null>>
+  }
+  undo: {
+    peek(eventId: number): Promise<Result<UndoCandidate | null>>
+    run(eventId: number, operationGroup: string): Promise<Result<UndoCandidate>>
   }
 }

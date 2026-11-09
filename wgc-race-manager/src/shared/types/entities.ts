@@ -108,6 +108,8 @@ export interface OperationHistoryEntry {
   note: string | null
   /** 操作が行われた起動セッション ID */
   bootSessionId: string | null
+  /** 1 回の操作で作られた履歴行をまとめる ID（UNDO の単位、D-017） */
+  operationGroup: string | null
 }
 
 /** アプリの起動セッション（D-013） */
@@ -146,4 +148,16 @@ export interface MandatoryStoppage extends Timestamps, SoftDeletable {
   startsAt: EpochMs
   /** 終了日時（未定の場合 null。登録・変更条件は §20 で未確定） */
   endsAt: EpochMs | null
+}
+
+/** 算出済みのラップ（周回番号・ラップタイムは保存せず算出。D-005） */
+export interface LapView {
+  recordId: number
+  teamId: number
+  lapNumber: number
+  passedAt: EpochMs
+  passedWallAt: EpochMs | null
+  /** ラップタイム（ms）。基準時刻が無い場合は null */
+  lapTimeMs: number | null
+  bootSessionId: string | null
 }

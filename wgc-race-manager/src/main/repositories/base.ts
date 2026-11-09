@@ -62,6 +62,11 @@ export abstract class BaseRepository<
     return this.def.table
   }
 
+  /** UPDATE で変更を許可するプロパティ名 */
+  get updatableKeys(): readonly string[] {
+    return this.def.updatable
+  }
+
   protected selectSql(): string {
     const cols = Object.entries(this.def.columns as Record<string, string>)
       .map(([prop, col]) => (prop === col ? col : `${col} AS "${prop}"`))

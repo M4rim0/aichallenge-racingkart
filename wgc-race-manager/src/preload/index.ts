@@ -32,6 +32,17 @@ const api: WgcApi = {
     resume: (eventId) => invoke(IpcChannel.raceResume, eventId),
     end: (eventId) => invoke(IpcChannel.raceEnd, eventId),
     correctStart: (eventId, at) => invoke(IpcChannel.raceCorrectStart, eventId, at)
+  },
+  laps: {
+    list: (eventId) => invoke(IpcChannel.lapsList, eventId),
+    register: (eventId) => invoke(IpcChannel.lapsRegister, eventId),
+    addPast: (eventId, at) => invoke(IpcChannel.lapsAddPast, eventId, at),
+    update: (recordId, at) => invoke(IpcChannel.lapsUpdate, recordId, at),
+    delete: (recordId) => invoke(IpcChannel.lapsDelete, recordId)
+  },
+  undo: {
+    peek: (eventId) => invoke(IpcChannel.undoPeek, eventId),
+    run: (eventId, group) => invoke(IpcChannel.undoRun, eventId, group)
   }
 }
 
