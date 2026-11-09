@@ -1,6 +1,6 @@
 # 設計：データ保護・復旧・電源管理（段階12）
 
-> 状態：**実装済み（Linux クラウド環境で検証済み）。Windows 実機テストは未実施（2026-11-09 時点）**。電源管理・OS のシャットダウン・スリープ復帰などは Windows 実機での確認が必要（dev-setup.md「段階12の動作確認」）。関連決定：D-063〜D-068、D-070〜D-072
+> 状態：**実装済み。Linux クラウド環境で検証済み、Windows 実機でも確認済み（2026-11-10、Electron 33.4.11、ユーザー報告で全項目 OK）**。詳細は dev-setup.md「段階12の動作確認」。関連決定：D-063〜D-068、D-070〜D-072
 > 実装：`src/main/db/integrity-precheck.ts`、`src/main/lifecycle/*`、`src/main/power/power-save-service.ts`、`src/main/services/recovery-service.ts`、`src/main/index.ts`、マイグレーション 004・005
 
 ## 1. DB の耐障害性（既存 + 段階12）
