@@ -99,6 +99,24 @@ export function registerIpcHandlers(ctx: AppContext): void {
     ctx.vehicleData.delete(asId(id))
     return null
   })
+
+  handle(IpcChannel.operatorsList, (includeDeleted: unknown) => ctx.operators.list({ includeDeleted: includeDeleted === true }))
+  handle(IpcChannel.operatorsCreate, (name: unknown) => ctx.operators.create(name))
+  handle(IpcChannel.operatorsRename, (id: unknown, name: unknown) => ctx.operators.rename(asId(id), name))
+  handle(IpcChannel.operatorsDelete, (id: unknown) => {
+    ctx.operators.delete(asId(id))
+    return null
+  })
+  handle(IpcChannel.operatorsSelect, (id: unknown) => ctx.operators.select(id === null ? null : asId(id)))
+  handle(IpcChannel.operatorsCurrent, () => ctx.operators.current())
+
+  handle(IpcChannel.memosList, (eventId: unknown) => ctx.memos.list(asId(eventId, 'eventId')))
+  handle(IpcChannel.memosCreate, (eventId: unknown, body: unknown) => ctx.memos.create(asId(eventId, 'eventId'), body))
+  handle(IpcChannel.memosUpdate, (id: unknown, body: unknown) => ctx.memos.updateBody(asId(id), body))
+  handle(IpcChannel.memosDelete, (id: unknown) => {
+    ctx.memos.delete(asId(id))
+    return null
+  })
 }
 
 function asImpact(v: unknown): TeamDeletionImpact {

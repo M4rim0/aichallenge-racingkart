@@ -11,6 +11,8 @@ import { UndoService } from './services/undo-service'
 import { CompetitorService } from './services/competitor-service'
 import { StandingsService } from './services/standings-service'
 import { VehicleDataService } from './services/vehicle-data-service'
+import { OperatorService } from './services/operator-service'
+import { MemoService } from './services/memo-service'
 
 export interface AppContext {
   db: Db
@@ -24,6 +26,8 @@ export interface AppContext {
   competitors: CompetitorService
   standings: StandingsService
   vehicleData: VehicleDataService
+  operators: OperatorService
+  memos: MemoService
   undo: UndoService
   /** この起動セッションの情報（PC 時刻異常の有無を含む）。未登録なら null */
   session: AppSession | null
@@ -32,7 +36,7 @@ export interface AppContext {
 /** Service の組み立て。作成・更新・操作日時はすべてマスタークロックから取得する。 */
 export function createAppContext(db: Db, clock: MasterClock, session: AppSession | null = null): AppContext {
   const repos = createRepositories(db, () => clock.now(), clock.bootSessionId)
-  const operator = new OperatorContext()
+  const operator = new OperatorContext((id) => repos.operators.findById(id))
   return {
     db,
     repos,
@@ -46,6 +50,8 @@ export function createAppContext(db: Db, clock: MasterClock, session: AppSession
     competitors: new CompetitorService(db, repos, clock, operator),
     standings: new StandingsService(repos),
     vehicleData: new VehicleDataService(db, repos, operator),
+    operators: new OperatorService(db, repos, operator),
+    memos: new MemoService(db, repos, clock, operator),
     undo: new UndoService(db, repos, operator)
   }
 }

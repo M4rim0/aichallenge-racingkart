@@ -4,7 +4,7 @@
  * データ操作系はすべて Result<T> を返し、例外は投げない。
  */
 import type { Result } from './errors'
-import type { AppSession, LapView, RaceEvent, Team, VehicleData, VehicleDataFields, VehicleDataRow } from './types/entities'
+import type { AppSession, LapView, Memo, Operator, RaceEvent, Team, VehicleData, VehicleDataFields, VehicleDataRow } from './types/entities'
 import type { RaceClockSnapshot } from './time/race-clock'
 import type {
   EventCreateInput,
@@ -48,7 +48,17 @@ export const IpcChannel = {
   vehicleList: 'vehicle:list',
   vehicleCreate: 'vehicle:create',
   vehicleUpdate: 'vehicle:update',
-  vehicleDelete: 'vehicle:delete'
+  vehicleDelete: 'vehicle:delete',
+  operatorsList: 'operators:list',
+  operatorsCreate: 'operators:create',
+  operatorsRename: 'operators:rename',
+  operatorsDelete: 'operators:delete',
+  operatorsSelect: 'operators:select',
+  operatorsCurrent: 'operators:current',
+  memosList: 'memos:list',
+  memosCreate: 'memos:create',
+  memosUpdate: 'memos:update',
+  memosDelete: 'memos:delete'
 } as const
 
 export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]
@@ -173,5 +183,20 @@ export interface WgcApi {
     create(lapRecordId: number, fields: Partial<VehicleDataFields>): Promise<Result<VehicleData>>
     update(vehicleDataId: number, fields: Partial<VehicleDataFields>): Promise<Result<VehicleData>>
     delete(vehicleDataId: number): Promise<Result<null>>
+  }
+  operators: {
+    list(includeDeleted?: boolean): Promise<Result<Operator[]>>
+    create(name: string): Promise<Result<Operator>>
+    rename(id: number, name: string): Promise<Result<Operator>>
+    delete(id: number): Promise<Result<null>>
+    /** null で未選択 */
+    select(id: number | null): Promise<Result<Operator | null>>
+    current(): Promise<Result<Operator | null>>
+  }
+  memos: {
+    list(eventId: number): Promise<Result<Memo[]>>
+    create(eventId: number, body: string): Promise<Result<Memo>>
+    update(id: number, body: string): Promise<Result<Memo>>
+    delete(id: number): Promise<Result<null>>
   }
 }

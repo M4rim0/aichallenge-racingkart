@@ -59,6 +59,20 @@ const api: WgcApi = {
     create: (lapRecordId, fields) => invoke(IpcChannel.vehicleCreate, lapRecordId, fields),
     update: (id, fields) => invoke(IpcChannel.vehicleUpdate, id, fields),
     delete: (id) => invoke(IpcChannel.vehicleDelete, id)
+  },
+  operators: {
+    list: (includeDeleted) => invoke(IpcChannel.operatorsList, includeDeleted === true),
+    create: (name) => invoke(IpcChannel.operatorsCreate, name),
+    rename: (id, name) => invoke(IpcChannel.operatorsRename, id, name),
+    delete: (id) => invoke(IpcChannel.operatorsDelete, id),
+    select: (id) => invoke(IpcChannel.operatorsSelect, id),
+    current: () => invoke(IpcChannel.operatorsCurrent)
+  },
+  memos: {
+    list: (eventId) => invoke(IpcChannel.memosList, eventId),
+    create: (eventId, body) => invoke(IpcChannel.memosCreate, eventId, body),
+    update: (id, body) => invoke(IpcChannel.memosUpdate, id, body),
+    delete: (id) => invoke(IpcChannel.memosDelete, id)
   }
 }
 

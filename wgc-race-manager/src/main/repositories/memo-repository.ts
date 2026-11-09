@@ -4,7 +4,7 @@ import { BaseRepository, timestampColumns, type ListOptions, type Now } from './
 
 export type MemoInsert = Pick<Memo, 'eventId' | 'body' | 'notedAt'>
 
-export class MemoRepository extends BaseRepository<Memo, keyof MemoInsert & string, 'body' | 'notedAt'> {
+export class MemoRepository extends BaseRepository<Memo, keyof MemoInsert & string, 'body'> {
   constructor(db: Db, now: Now) {
     super(db, now, {
       table: 'memos',
@@ -16,7 +16,7 @@ export class MemoRepository extends BaseRepository<Memo, keyof MemoInsert & stri
         ...timestampColumns
       },
       insertable: ['eventId', 'body', 'notedAt'],
-      updatable: ['body', 'notedAt'],
+      updatable: ['body'], // 日時は作成後に変更しない（D-036）
       orderBy: 'noted_at ASC, id ASC'
     })
   }

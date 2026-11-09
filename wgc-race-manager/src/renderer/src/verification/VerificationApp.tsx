@@ -5,6 +5,8 @@ import { ClockPanel } from './ClockPanel'
 import { LapsPanel } from './LapsPanel'
 import { CompetitorsPanel } from './CompetitorsPanel'
 import { VehiclePanel } from './VehiclePanel'
+import { OperatorsPanel } from './OperatorsPanel'
+import { MemosPanel } from './MemosPanel'
 
 /**
  * 検証用画面（決定 D-004）。
@@ -42,11 +44,13 @@ export function VerificationApp(): React.JSX.Element {
           </table>
         )}
       </details>
+      <OperatorsPanel />
       <EventsTeamsPanel selected={selected} setSelected={setSelected} />
       <ClockPanel eventId={selected} />
       <LapsPanel eventId={selected} />
       <VehiclePanel eventId={selected} />
       <CompetitorsPanel eventId={selected} />
+      <MemosPanel eventId={selected} />
     </main>
   )
 }
