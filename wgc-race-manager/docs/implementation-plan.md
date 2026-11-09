@@ -1,7 +1,8 @@
 # 実装計画・ディレクトリ構成案（v0.1 対応）
 
 > 基準文書：[spec-v0.1.md](./spec-v0.1.md)
-> 状態：**提案（ユーザー承認待ち）**。本書の時点では実装コードは存在しない。
+> 状態：計画は承認済み（確定事項は [decisions.md](./decisions.md)）。段階1 完了。
+> 段階1で確定したバージョンは [dev-setup.md](./dev-setup.md) を参照。
 
 ---
 
@@ -11,9 +12,9 @@
 |---|---|---|---|
 | ランタイム | Electron | 45.2.x | 46 は alpha のため不採用 |
 | UI | React | 19.x | |
-| 言語 | TypeScript | 7.0.x（※） | ※ビルドツール側の対応状況を段階1で確認し、問題があれば 5.x/6.x 系に固定 |
+| 言語 | TypeScript | 6.0.3（確定） | 7.0（ネイティブ版）は周辺ツール対応を考慮し見送り |
 | 状態管理 | Zustand | 5.x | Renderer 側の表示状態のみ。正のデータは常に DB |
-| DB | SQLite + better-sqlite3 | 13.x | Node ≥22 必須。Electron ABI 向けに `@electron/rebuild` で再ビルド |
+| DB | SQLite + better-sqlite3 | 13.0.3（確定） | Node-API 版のため Node/Electron で同一バイナリ。再ビルド不要 |
 | ビルド | electron-vite（Vite） | 6.x / 8.x | main / preload / renderer を一括ビルド |
 | テスト | Vitest | 5.x | Service・Repository・計算エンジンの自動テスト |
 | 配布 | electron-builder | 26.x | Windows 向け NSIS またはポータブル（段階1で決定事項として確認） |
@@ -184,7 +185,7 @@ wgc-race-manager/
 - 本作業環境は **Linux のクラウドコンテナ**であり、Windows 実機での GUI 動作・スリープ抑止・インストーラ動作は確認できない。
   - 自動テスト（ロジック・DB・CSV）は Linux 上で実行可能。
   - Windows 固有の確認（電源管理、Excel での CSV 表示、インストーラ）は**手動テスト手順書を用意し、ユーザー側で実施**していただく必要がある。
-- better-sqlite3 はネイティブモジュールのため、Node 用（テスト）と Electron 用（実行）でビルドが異なる。npm スクリプトで切り替える。
+- better-sqlite3 13 は Node-API 版のため、Node（テスト）と Electron（実行）で同じバイナリが使える（段階1で確認済み）。
 
 ---
 
