@@ -43,6 +43,16 @@ const api: WgcApi = {
   undo: {
     peek: (eventId) => invoke(IpcChannel.undoPeek, eventId),
     run: (eventId, group) => invoke(IpcChannel.undoRun, eventId, group)
+  },
+  competitors: {
+    listByEvent: (eventId) => invoke(IpcChannel.competitorsListByEvent, eventId),
+    register: (teamId) => invoke(IpcChannel.competitorsRegister, teamId),
+    addPast: (teamId, at) => invoke(IpcChannel.competitorsAddPast, teamId, at),
+    update: (recordId, at) => invoke(IpcChannel.competitorsUpdate, recordId, at),
+    delete: (recordId) => invoke(IpcChannel.competitorsDelete, recordId)
+  },
+  standings: {
+    get: (eventId) => invoke(IpcChannel.standingsGet, eventId)
   }
 }
 

@@ -143,10 +143,11 @@ export class UndoService {
   /** 追加の取り消し（= 論理削除）の可否 */
   private checkCreateUndo(table: UndoableTable, current: Row): void {
     if (table === 'teams') {
+      // 有効な記録のみ数える。後続の記録追加を先に UNDO（論理削除）すれば、チームの追加も取り消せる（D-024）
       const n = (t: string): number =>
-        (this.db.prepare(`SELECT COUNT(*) c FROM ${t} WHERE team_id = ?`).get(current.id) as { c: number }).c
+        (this.db.prepare(`SELECT COUNT(*) c FROM ${t} WHERE team_id = ? AND deleted_at IS NULL`).get(current.id) as { c: number }).c
       if (n('lap_records') + n('competitor_passes') > 0) {
-        throw conflict('このチームには記録があるため、追加を取り消せません（必要であればチームの削除を使用してください）')
+        throw conflict('このチームには有効な記録があるため、追加を取り消せません（記録を先に取り消すか、チームの削除を使用してください）')
       }
     }
     if (table === 'lap_records' && this.repos.vehicleData.findByLapRecord(current.id)) {
@@ -161,9 +162,7 @@ export class UndoService {
       const rec = target as unknown as PassRecord
       const repo = table === 'lap_records' ? this.repos.lapRecords : this.repos.competitorPasses
       const sameTeam = repo.listByTeam(rec.teamId)
-      if (table === 'lap_records') {
-        assertAfterStart(rec.passedAt, this.repos.events.getById(rec.eventId).actualStartAt)
-      }
+      assertAfterStart(rec.passedAt, this.repos.events.getById(rec.eventId).actualStartAt)
       assertNoDuplicate(rec.passedAt, sameTeam, rec.id)
       if (mode === 'update') assertKeepsOrder(rec.id, rec.passedAt, sameTeam)
     }

@@ -38,7 +38,13 @@ export const IpcChannel = {
   lapsUpdate: 'laps:update',
   lapsDelete: 'laps:delete',
   undoPeek: 'undo:peek',
-  undoRun: 'undo:run'
+  undoRun: 'undo:run',
+  competitorsListByEvent: 'competitors:list-by-event',
+  competitorsRegister: 'competitors:register',
+  competitorsAddPast: 'competitors:add-past',
+  competitorsUpdate: 'competitors:update',
+  competitorsDelete: 'competitors:delete',
+  standingsGet: 'standings:get'
 } as const
 
 export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]
@@ -83,6 +89,29 @@ export interface UndoCandidate {
   historyIds: number[]
 }
 
+export interface StandingRow {
+  rank: number
+  tied: boolean
+  teamId: number
+  teamName: string
+  bibNumber: string | null
+  isOwnTeam: boolean
+  teamDeleted: boolean
+  laps: number
+  lastPassAt: number | null
+  lapsBehindLeader: number
+  lapsBehindAhead: number | null
+  timeBehindAheadMs: number | null
+}
+
+export interface Standings {
+  ruleId: string
+  ruleLabel: string
+  /** true の場合、画面で「暫定順位」と明示する（D-023） */
+  provisional: boolean
+  rows: StandingRow[]
+}
+
 /** preload が window.wgc として公開する API */
 export interface WgcApi {
   app: {
@@ -123,5 +152,16 @@ export interface WgcApi {
   undo: {
     peek(eventId: number): Promise<Result<UndoCandidate | null>>
     run(eventId: number, operationGroup: string): Promise<Result<UndoCandidate>>
+  }
+  competitors: {
+    /** チーム ID → 通過一覧 */
+    listByEvent(eventId: number): Promise<Result<Record<number, LapView[]>>>
+    register(teamId: number): Promise<Result<LapView>>
+    addPast(teamId: number, passedAt: number): Promise<Result<LapView>>
+    update(recordId: number, passedAt: number): Promise<Result<LapView>>
+    delete(recordId: number): Promise<Result<null>>
+  }
+  standings: {
+    get(eventId: number): Promise<Result<Standings>>
   }
 }

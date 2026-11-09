@@ -77,6 +77,18 @@ export function registerIpcHandlers(ctx: AppContext): void {
     }
     return ctx.undo.undo(asId(eventId, 'eventId'), group)
   })
+
+  handle(IpcChannel.competitorsListByEvent, (eventId: unknown) => ctx.competitors.listByEvent(asId(eventId, 'eventId')))
+  handle(IpcChannel.competitorsRegister, (teamId: unknown) => ctx.competitors.register(asId(teamId, 'teamId')))
+  handle(IpcChannel.competitorsAddPast, (teamId: unknown, at: unknown) => ctx.competitors.addPast(asId(teamId, 'teamId'), at as number))
+  handle(IpcChannel.competitorsUpdate, (recordId: unknown, at: unknown) =>
+    ctx.competitors.updatePassedAt(asId(recordId, 'recordId'), at as number)
+  )
+  handle(IpcChannel.competitorsDelete, (recordId: unknown) => {
+    ctx.competitors.delete(asId(recordId, 'recordId'))
+    return null
+  })
+  handle(IpcChannel.standingsGet, (eventId: unknown) => ctx.standings.get(asId(eventId, 'eventId')))
 }
 
 function asImpact(v: unknown): TeamDeletionImpact {
