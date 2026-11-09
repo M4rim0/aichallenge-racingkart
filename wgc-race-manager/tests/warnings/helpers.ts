@@ -59,3 +59,11 @@ export function finiteDeep(v: unknown): boolean {
   if (v && typeof v === 'object') return Object.values(v).every(finiteDeep)
   return true
 }
+
+/** 推定時間差の境界テスト用：対象チームの 5 周平均の推定位置を、自チームとの推定時間差が gapMs になるよう書き換える（W-2） */
+export function setEstimatedGap(r: StrategyReport, name: string, gapMs: number): void {
+  const ownT = r.teams.find((t) => t.isOwnTeam)!
+  const t = r.teams.find((x) => x.name === name)!
+  const sc = t.scenarios.avg5
+  sc.position = { ...sc.position!, q: ownT.scenarios.avg5.position!.q - gapMs / sc.paceMs! }
+}

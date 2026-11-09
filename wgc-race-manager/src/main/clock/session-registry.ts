@@ -5,7 +5,7 @@ import type { Repositories } from '../repositories'
 import type { MasterClock } from './master-clock'
 
 /**
- * 起動セッションを登録し、PC 時刻異常を検出する（D-013）。
+ * 起動セッションを登録し、PC 時刻異常を検出する（D-013）。BOOT の記録も同じトランザクションで追記する（D-066）。
  * 起動時の PC 実日時が、DB に保存済みの最新日時より過去なら異常として記録する。
  * 保存済みの日時は一切書き換えない。
  */
@@ -15,7 +15,7 @@ export function registerBootSession(db: Db, repos: Repositories, clock: MasterCl
       const latest = repos.appSessions.latestSavedAt()
       const wall = clock.anchorWall
       const anomaly = latest !== null && wall < latest
-      return repos.appSessions.insert({
+      const session = repos.appSessions.insert({
         id: clock.bootSessionId,
         startedWallAt: wall,
         latestSavedAtBefore: latest,
@@ -25,6 +25,16 @@ export function registerBootSession(db: Db, repos: Repositories, clock: MasterCl
           : null,
         appVersion
       })
+      // 起動の記録（D-066）。正常終了の判定は、この BOOT がある起動だけを対象にする
+      repos.lifecycle.insert({
+        bootSessionId: session.id,
+        kind: 'BOOT',
+        at: clock.now(),
+        wallAt: clock.wallNow(),
+        monoMs: clock.monoNow(),
+        detail: anomaly ? 'clock anomaly at boot' : null
+      })
+      return session
     })
     .immediate()
 }

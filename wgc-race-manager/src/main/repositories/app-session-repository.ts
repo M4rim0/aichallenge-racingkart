@@ -75,7 +75,9 @@ export class AppSessionRepository {
       'SELECT MAX(operated_at), NULL, NULL, NULL, NULL FROM operation_history',
       'SELECT MAX(created_at), MAX(at), MAX(wall_at), NULL, NULL FROM race_clock_transitions',
       'SELECT MAX(created_at), MAX(updated_at), MAX(deleted_at), NULL, NULL FROM mandatory_stoppages',
-      'SELECT MAX(started_wall_at), NULL, NULL, NULL, NULL FROM app_sessions'
+      'SELECT MAX(started_wall_at), NULL, NULL, NULL, NULL FROM app_sessions',
+      "SELECT MAX(at), MAX(wall_at), NULL, NULL, NULL FROM app_lifecycle_events",
+      "SELECT MAX(at), MAX(wall_at), NULL, NULL, NULL FROM race_recovery_holds"
     ]
     const rows = parts.map((sql) => Object.values(this.db.prepare(sql).raw(false).get() as object))
     let max: number | null = null

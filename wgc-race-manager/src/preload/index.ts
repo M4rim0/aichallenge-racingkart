@@ -89,6 +89,12 @@ const api: WgcApi = {
   warnings: {
     evaluate: (eventId) => invoke(IpcChannel.warningsEvaluate, eventId),
     acknowledge: (eventId, occurrenceId) => invoke(IpcChannel.warningsAcknowledge, eventId, occurrenceId)
+  },
+  lifecycle: {
+    getStatus: () => invoke(IpcChannel.lifecycleGetStatus)
+  },
+  recovery: {
+    confirm: (eventId, holdId) => invoke(IpcChannel.recoveryConfirm, eventId, holdId)
   }
 }
 

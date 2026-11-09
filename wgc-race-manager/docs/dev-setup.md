@@ -8,6 +8,25 @@
 C++ ビルドツール（Visual Studio Build Tools / Python）は**不要**です。
 better-sqlite3 13 は Node-API 対応の Windows x64 用ビルド済みバイナリを同梱しており、Node と Electron の両方で同じバイナリが動作します。
 
+## コードの取得（既存の AI Challenge 環境を壊さない方法）
+
+既存のクローン（AI Challenge 用）の作業ブランチはそのままにして、WGC 専用のフォルダを `git worktree` で作ります。
+
+```powershell
+cd C:\dev\aichallenge-racingkart          # 既存クローン（例）
+git status                                 # 現在のブランチと未コミットの変更を確認（worktree は既存の作業に影響しません）
+git fetch origin claude/wgc-race-management-system-j8o71p
+git worktree add -b claude/wgc-race-management-system-j8o71p C:\dev\wgc origin/claude/wgc-race-management-system-j8o71p
+# 既に同名のローカルブランチがある場合：git worktree add C:\dev\wgc claude/wgc-race-management-system-j8o71p
+#   → git -C C:\dev\wgc pull --ff-only
+# そのブランチが既存クローン側で checkout 中の場合は worktree を作れません（既存側のブランチを勝手に切り替えないこと）
+```
+
+別フォルダへの新規クローンでも構いません：
+`git clone -b claude/wgc-race-management-system-j8o71p --single-branch https://github.com/M4rim0/aichallenge-racingkart C:\dev\wgc`
+
+- フォルダは OneDrive 等の同期フォルダの外、短いパス（例：`C:\dev\wgc`）に置いてください。
+
 ## 初回セットアップ
 
 ```powershell
@@ -15,7 +34,11 @@ cd wgc-race-manager
 npm ci
 ```
 
-`npm ci` は `package-lock.json` に固定されたバージョンをそのまま入れます（インターネット接続はこの時だけ必要です。アプリ本体はオフラインで動作します）。
+`npm ci` は `package-lock.json` に固定されたバージョンをそのまま入れます（Windows 用のネイティブ部品も lockfile に含まれています）。
+
+- **Electron 本体（約 100MB）は `npm ci` では入らず、最初の起動時（`npm run dev` / `npm start`）に自動でダウンロードされます。** この時もインターネット接続が必要です。失敗した場合は `npx install-electron` を実行してください。
+- PowerShell で「スクリプトの実行が無効」と出る場合は `npm.cmd ci` のように `npm.cmd` を使うか、コマンドプロンプトで実行してください。
+- 環境変数・設定ファイルは不要です。アプリ本体はオフラインで動作します。
 
 ## コマンド
 
@@ -36,7 +59,7 @@ npm ci
 ## 段階2の動作確認（手動）
 
 1. `npm run build` → `npm start`
-2. 検証用画面に `dbPath`（`%APPDATA%\wgc-race-manager\wgc-race-manager.sqlite`）、`dbSchemaVersion` = 1、`dbIntegrity` = ok が表示されること
+2. 検証用画面の「起動・DB確認」に `dbPath`（`%APPDATA%\wgc-race-manager\wgc-race-manager.sqlite`）、`dbSchemaVersion` = 5（段階12時点）、`dbIntegrity` = ok が表示されること
 3. アプリを終了・再起動しても同じ表示になること
 
 ## 段階3の動作確認（手動・検証用画面）
@@ -122,6 +145,22 @@ npm ci
 6. アプリを再起動すると確認済み状態がリセットされること
 7. 開始前・終了後は警告が出ないこと
 
+## 段階12の動作確認（**Windows 実機での確認が必要。2026-11-09 時点で未実施**）
+
+> 段階12は Linux クラウド環境での自動テスト・実アプリ確認のみ完了しています。以下はまだ Windows 実機で確認していません。
+
+1. START 後、管理者でないコマンドプロンプトで `powercfg /requests` を実行し、DISPLAY と SYSTEM に electron.exe（または WGC Race Manager）の要求があること。PAUSE 中も残ること
+2. END 後・アプリの正常終了後・タスクマネージャーで強制終了した後に、`powercfg /requests` から要求が消えること
+3. 画面の消灯時間・スリープ時間を短く（例：1 分）設定し、走行中は画面が消えずスリープもしないこと。END 後は通常どおり消灯・スリープすること
+4. `powercfg /getactivescheme` の結果が、アプリの起動前後で変わらないこと（電源プランを変更しない）
+5. 走行中に × ボタン・Alt+F4 で閉じようとすると確認ダイアログが出ること（キャンセルで閉じない、「終了する」で終了）
+6. アプリを開いたまま Windows をシャットダウン・ログオフしたとき、確認ダイアログでシャットダウンが止まらないこと。次回起動時に「前回の終了：正常終了」と表示されること
+7. タスクマネージャーで強制終了 → 再起動すると「前回は正常に終了しませんでした」の警告に復旧確認待ちの大会が表示されること。大会を選ぶとレース状態（PAUSED を含む）が戻り、経過時間は停止していた時間も含むこと。電源の抑制が維持されること。確認前は LAP REGISTER・通過登録・PAUSE などがエラーになり、メモは記録できること。「選択中の大会の復旧を確認」の後は通常どおり操作できること（確認しても経過時間・状態は変わらないこと）
+7-2. 正常終了 → 再起動では復旧確認待ちにならないこと
+8. 電源ボタン長押しで強制的に電源を切る → 再起動しても起動が停止せず（整合性 ok）、確定済みの記録が残っていること
+9. スリープ・休止して数分後に復帰し、検証用画面の「PC実日時 − マスタークロック」と「復帰時の時刻ずれ」を確認すること（5 秒を超えて変化した場合は警告が出る。Windows の単調時計がスリープ中に止まるかどうかの確認）
+10. ノート PC のフタを閉じたときの動作（アプリでは防げない）と、復帰後の警告
+
 ## データの保存場所
 
 `%APPDATA%\wgc-race-manager\wgc-race-manager.sqlite`（WAL モードのため `-wal` / `-shm` ファイルが同じフォルダに作られることがあります。アプリ起動中にこれらを削除・移動しないでください）
@@ -141,6 +180,10 @@ npm ci
 | vitest | 5.1.0 |
 
 TypeScript は 7.0（ネイティブ版）が最新ですが、周辺ツールの対応状況を考慮し安定した 6.0 系を採用しています。
+
+## exe の作成（未設定）
+
+配布形式（インストーラ / ポータブル exe）が未決定のため、electron-builder 等のパッケージ設定はまだありません。決定後に追加予定（better-sqlite3 の `.node` を asar から展開する設定が必要。コード署名がないため初回起動時に SmartScreen の警告が出る）。
 
 ## 未決定
 

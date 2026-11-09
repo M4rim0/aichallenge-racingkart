@@ -11,6 +11,7 @@ import { runAudited } from '../db/unit-of-work'
 import type { Repositories } from '../repositories'
 import type { TeamRelatedCounts } from '../repositories/team-repository'
 import type { OperatorContext } from './operator-context'
+import { noRecoveryGuard, type RecoveryGuard } from './recovery-service'
 
 export type TeamDeletionImpact = TeamRelatedCounts
 
@@ -26,7 +27,8 @@ export class TeamService {
   constructor(
     private readonly db: Db,
     private readonly repos: Repositories,
-    private readonly operator: OperatorContext
+    private readonly operator: OperatorContext,
+    private readonly guard: RecoveryGuard = noRecoveryGuard
   ) {}
 
   list(eventId: number, opts: { includeDeleted?: boolean } = {}): Team[] {
@@ -45,6 +47,7 @@ export class TeamService {
     const errors = validateTeamCreate(input)
     if (Object.keys(errors).length > 0) throw new AppError(ErrorCode.VALIDATION, '入力内容に誤りがあります', errors)
     this.requireEvent(eventId)
+    this.guard.assertNotPending(eventId) // 復旧確認待ち（D-071）
     if (input.isOwnTeam) this.assertNoOtherOwnTeam(eventId, null)
     return runAudited(this.db, this.repos, { eventId, operator: this.operator.get() }, () => {
       const created = this.repos.teams.insert({ ...input, eventId })
@@ -59,6 +62,7 @@ export class TeamService {
     const errors = validateTeamUpdate(patch)
     if (Object.keys(errors).length > 0) throw new AppError(ErrorCode.VALIDATION, '入力内容に誤りがあります', errors)
     const team = this.get(id)
+    this.guard.assertNotPending(team.eventId)
     if (team.deletedAt !== null) {
       throw new AppError(ErrorCode.TEAM_DELETED, '削除済みのチームは編集できません。先に復元してください')
     }
@@ -83,6 +87,7 @@ export class TeamService {
    */
   delete(id: number, confirmedImpact: TeamDeletionImpact): Team {
     const team = this.get(id)
+    this.guard.assertNotPending(team.eventId)
     if (team.deletedAt !== null) throw new AppError(ErrorCode.TEAM_DELETED, 'このチームは既に削除されています')
     return runAudited(this.db, this.repos, { eventId: team.eventId, operator: this.operator.get() }, () => {
       // 件数確認と削除を同一トランザクションで行い、確認後の記録追加との競合を防ぐ
@@ -112,6 +117,7 @@ export class TeamService {
 
   restore(id: number): Team {
     const team = this.get(id)
+    this.guard.assertNotPending(team.eventId)
     if (team.deletedAt === null) throw new AppError(ErrorCode.TEAM_NOT_DELETED, 'このチームは削除されていません')
     if (team.isOwnTeam) this.assertNoOtherOwnTeam(team.eventId, id)
     return runAudited(this.db, this.repos, { eventId: team.eventId, operator: this.operator.get() }, () => {

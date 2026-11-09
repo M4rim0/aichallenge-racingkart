@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { detectWarnings, type WarningCandidate } from '../../src/shared/warnings/detect'
 import type { StrategyReport } from '../../src/shared/strategy/engine'
 import type { ScenarioId } from '../../src/shared/strategy/pace'
-import { M, every, finiteDeep, laps, own, patchScenario, report, setPaceChange, team } from './helpers'
+import { M, every, finiteDeep, laps, own, patchScenario, report, setEstimatedGap, setPaceChange, team } from './helpers'
 
 const of = (ws: WarningCandidate[], type: string) => ws.filter((w) => w.type === type)
 
@@ -67,11 +67,53 @@ describe('① rear approach (D-057, W-1..W-3)', () => {
   it('raises a prediction-based INFO to the gap floor (max of both)', () => {
     const r = base()
     patchScenario(r, 'Rear', 'avg10', { predictedRank: 1 })
-    r.teams.find((t) => t.isOwnTeam)!.behind!.estimatedTimeGapMs = 90_000
+    setEstimatedGap(r, 'Rear', 90_000)
     const [w] = of(detectWarnings({ report: r }).warnings, 'REAR_APPROACH')
     expect(w).toMatchObject({ severity: 'CAUTION', kind: 'OVERTAKE' })
     expect(w!.basis).toMatchObject({ predictionSeverity: 'INFO', gapSeverity: 'CAUTION', gapMeasured: false })
     expect(w!.message).toContain('推定')
+  })
+})
+
+describe('① W-2 (D-069): every team behind is checked, but only when its gap meets the condition', () => {
+  /** 自チームの後ろに 2 チーム（直下 Near と、さらに後ろの Far）。どちらも遅く、予測では入れ替わらない */
+  function threeBehind(): StrategyReport {
+    return report([own(every(10, 10, 125)), team(3, 'Near', every(11, 11, 125)), team(4, 'Far', every(12, 12, 125))], 125)
+  }
+
+  it('does not warn about teams merely behind', () => {
+    const r = threeBehind()
+    expect(r.teams.map((t) => t.name)).toEqual(['Own', 'Near', 'Far'])
+    expect(of(detectWarnings({ report: r }).warnings, 'REAR_APPROACH')).toEqual([])
+  })
+
+  it('warns about a non-adjacent team whose estimated gap is within the thresholds', () => {
+    const r = threeBehind()
+    setEstimatedGap(r, 'Far', 120_000)
+    expect(of(detectWarnings({ report: r }).warnings, 'REAR_APPROACH')).toMatchObject([{ teamId: 4, kind: 'PROXIMITY', severity: 'CAUTION', basis: { gapMeasured: false } }])
+    setEstimatedGap(r, 'Far', 120_001)
+    expect(of(detectWarnings({ report: r }).warnings, 'REAR_APPROACH')).toEqual([])
+    setEstimatedGap(r, 'Far', 60_000)
+    expect(of(detectWarnings({ report: r }).warnings, 'REAR_APPROACH')).toMatchObject([{ teamId: 4, severity: 'CRITICAL' }])
+  })
+
+  it('evaluates each team independently (separate keys)', () => {
+    const r = threeBehind()
+    setEstimatedGap(r, 'Near', 100_000)
+    setEstimatedGap(r, 'Far', 50_000)
+    const w = of(detectWarnings({ report: r }).warnings, 'REAR_APPROACH')
+    expect(w.map((x) => [x.key, x.severity])).toEqual([
+      ['REAR_APPROACH:4', 'CRITICAL'],
+      ['REAR_APPROACH:3', 'CAUTION']
+    ])
+  })
+
+  it('uses the measured gap for a team on the same lap (not adjacent) and never the raw last-pass difference across laps', () => {
+    // Mid は同周回（12 周）で後方 3 分、Close は同周回で後方 1.5 分 → Close が直下、Mid はその次
+    const r = report([own(every(10, 10, 125)), team(3, 'Close', every(121.5 - 11 * 10.5, 10.5, 121.5 + 1e-6)), team(4, 'Mid', every(123 - 11 * 10.8, 10.8, 123 + 1e-6))], 125)
+    expect(r.teams.map((t) => t.name)).toEqual(['Own', 'Close', 'Mid'])
+    const w = of(detectWarnings({ report: r }).warnings, 'REAR_APPROACH')
+    expect(w.map((x) => [x.teamName, x.basis.gapMs, x.basis.gapMeasured])).toEqual([['Close', 90_000, true]])
   })
 })
 
@@ -169,7 +211,7 @@ describe('Uncertainty handling (D-058, W-6..W-9)', () => {
       patchScenario(r, 'Rear', s, s === 'avg10' ? { predictedRank: 1 } : { predictedRank: 1, addUncertainty: 'OVERDUE' })
     }
     setPaceChange(r, 'Rear', 20)
-    r.teams.find((t) => t.isOwnTeam)!.behind!.estimatedTimeGapMs = 30_000
+    setEstimatedGap(r, 'Rear', 30_000)
     const res = detectWarnings({ report: r })
     // avg3/avg5 は除外、avg10 のみ → 情報。時間差は使わない。ペース警告は出さない
     expect(of(res.warnings, 'REAR_APPROACH')).toMatchObject([{ severity: 'INFO', basis: { overtakeScenarios: ['avg10'], gapSeverity: null } }])
@@ -217,7 +259,7 @@ describe('Uncertainty handling (D-058, W-6..W-9)', () => {
     patchScenario(r, 'Rear', 'avg3', { predictedRank: 1 })
     patchScenario(r, 'Rear', 'avg5', { predictedRank: 1 })
     patchScenario(r, 'Rear', 'avg10', { predictedRank: 1 })
-    r.teams.find((t) => t.isOwnTeam)!.behind!.estimatedTimeGapMs = 45_000
+    setEstimatedGap(r, 'Rear', 45_000)
     expect(of(detectWarnings({ report: r }).warnings, 'REAR_APPROACH')[0]).toMatchObject({ severity: 'CRITICAL', basis: { predictionSeverity: 'CAUTION', gapSeverity: 'CRITICAL' } })
   })
 

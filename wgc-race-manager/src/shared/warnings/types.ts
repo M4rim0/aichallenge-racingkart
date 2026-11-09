@@ -2,7 +2,7 @@ import type { SuppressedWarning, WarningCandidate } from './detect'
 
 /** 警告一覧の表示用の型（Main ⇔ Renderer 共通） */
 
-/** NEW：この評価で発生または重要度が上昇した / CONTINUING：前回から継続（W-10） */
+/** NEW：発生または重要度上昇から 10 秒以内 / CONTINUING：それ以降（W-10、D-069） */
 export type WarningPhase = 'NEW' | 'CONTINUING'
 
 export interface ActiveWarning extends WarningCandidate {

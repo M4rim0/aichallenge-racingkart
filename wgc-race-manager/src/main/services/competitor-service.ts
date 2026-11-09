@@ -7,6 +7,7 @@ import type { MasterClock } from '../clock/master-clock'
 import type { OperatorContext } from './operator-context'
 import { toViews } from './lap-service'
 import { assertAfterStart, assertKeepsOrder, assertNoDuplicate, assertNotFuture, assertValidEpoch } from './pass-record-rules'
+import { noRecoveryGuard, type RecoveryGuard } from './recovery-service'
 
 /**
  * 他チーム通過記録（仕様 §7、決定 D-003, D-008, D-009, D-020〜D-022）。
@@ -21,7 +22,8 @@ export class CompetitorService {
     private readonly db: Db,
     private readonly repos: Repositories,
     private readonly clock: MasterClock,
-    private readonly operator: OperatorContext
+    private readonly operator: OperatorContext,
+    private readonly guard: RecoveryGuard = noRecoveryGuard
   ) {}
 
   /** チームの通過一覧（周回番号・ラップタイム付き。初回ラップタイムは null） */
@@ -44,6 +46,7 @@ export class CompetitorService {
   /** 通過登録（その場での登録） */
   register(teamId: number): LapView {
     const team = this.requireCompetitor(teamId)
+    this.guard.assertNotPending(team.eventId) // 復旧確認待ち（D-071）
     const id = runAudited(this.db, this.repos, this.ctx(team.eventId), () => {
       const event = this.requireEvent(team.eventId)
       if (event.status !== 'RUNNING' && event.status !== 'PAUSED') {
@@ -79,6 +82,7 @@ export class CompetitorService {
   addPast(teamId: number, passedAt: number): LapView {
     assertValidEpoch(passedAt)
     const team = this.requireCompetitor(teamId)
+    this.guard.assertNotPending(team.eventId)
     const id = runAudited(this.db, this.repos, this.ctx(team.eventId), () => {
       const event = this.requireEvent(team.eventId)
       assertAfterStart(passedAt, event.actualStartAt)
@@ -102,6 +106,7 @@ export class CompetitorService {
   updatePassedAt(recordId: number, passedAt: number): LapView {
     assertValidEpoch(passedAt)
     const rec = this.requireRecord(recordId)
+    this.guard.assertNotPending(rec.eventId)
     runAudited(this.db, this.repos, this.ctx(rec.eventId), () => {
       const event = this.requireEvent(rec.eventId)
       const sameTeam = this.repos.competitorPasses.listByTeam(rec.teamId)
@@ -117,6 +122,7 @@ export class CompetitorService {
 
   delete(recordId: number): void {
     const rec = this.requireRecord(recordId)
+    this.guard.assertNotPending(rec.eventId)
     runAudited(this.db, this.repos, this.ctx(rec.eventId), () => {
       const { before, after } = this.repos.competitorPasses.softDelete(recordId)
       return { result: null, changes: [{ action: 'DELETE', targetTable: 'competitor_passes', targetId: recordId, before, after }] }

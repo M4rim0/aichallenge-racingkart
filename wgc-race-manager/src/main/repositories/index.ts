@@ -1,5 +1,7 @@
 import type { Db } from '../db/connection'
 import type { Now } from './base'
+import { AppLifecycleRepository } from './app-lifecycle-repository'
+import { RaceRecoveryRepository } from './race-recovery-repository'
 import { AppSessionRepository } from './app-session-repository'
 import { EventRepository } from './event-repository'
 import { MandatoryStoppageRepository } from './mandatory-stoppage-repository'
@@ -21,6 +23,8 @@ export interface Repositories {
   memos: MemoRepository
   history: OperationHistoryRepository
   appSessions: AppSessionRepository
+  lifecycle: AppLifecycleRepository
+  recovery: RaceRecoveryRepository
   clockTransitions: RaceClockTransitionRepository
   stoppages: MandatoryStoppageRepository
 }
@@ -40,6 +44,8 @@ export function createRepositories(db: Db, now: Now, bootSessionId: string | nul
     memos: new MemoRepository(db, now),
     history: new OperationHistoryRepository(db, now, bootSessionId),
     appSessions: new AppSessionRepository(db),
+    lifecycle: new AppLifecycleRepository(db),
+    recovery: new RaceRecoveryRepository(db),
     clockTransitions: new RaceClockTransitionRepository(db, now),
     stoppages: new MandatoryStoppageRepository(db, now)
   }

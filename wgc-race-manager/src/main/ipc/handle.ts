@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { AppError, ErrorCode, type Result } from '@shared/errors'
+import { appClosingGate } from '../lifecycle/closing-gate'
 
 /**
  * IPC ハンドラを登録する。例外は Result のエラーに変換し、Renderer に内部情報を漏らさない。
@@ -8,6 +9,7 @@ import { AppError, ErrorCode, type Result } from '@shared/errors'
 export function handle<A extends unknown[], T>(channel: string, fn: (...args: A) => T): void {
   ipcMain.handle(channel, (_event, ...args: unknown[]): Result<T> => {
     try {
+      appClosingGate.assertAccepting(channel) // 終了処理中は通常の操作を拒否（D-066）
       return { ok: true, value: fn(...(args as A)) }
     } catch (e) {
       if (e instanceof AppError) return { ok: false, error: e.toPayload() }
@@ -21,6 +23,7 @@ export function handle<A extends unknown[], T>(channel: string, fn: (...args: A)
 export function handleAsync<A extends unknown[], T>(channel: string, fn: (...args: A) => Promise<T>): void {
   ipcMain.handle(channel, async (_event, ...args: unknown[]): Promise<Result<T>> => {
     try {
+      appClosingGate.assertAccepting(channel)
       return { ok: true, value: await fn(...(args as A)) }
     } catch (e) {
       if (e instanceof AppError) return { ok: false, error: e.toPayload() }

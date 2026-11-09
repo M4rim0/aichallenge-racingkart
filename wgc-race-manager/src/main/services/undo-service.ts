@@ -6,6 +6,7 @@ import type { Repositories } from '../repositories'
 import type { BaseRepository } from '../repositories/base'
 import type { OperatorContext } from './operator-context'
 import { assertAfterStart, assertKeepsOrder, assertNoDuplicate } from './pass-record-rules'
+import { noRecoveryGuard, type RecoveryGuard } from './recovery-service'
 
 /**
  * UNDO（直前操作の取り消し、決定 D-017）。
@@ -47,7 +48,8 @@ export class UndoService {
   constructor(
     private readonly db: Db,
     private readonly repos: Repositories,
-    private readonly operator: OperatorContext
+    private readonly operator: OperatorContext,
+    private readonly guard: RecoveryGuard = noRecoveryGuard
   ) {}
 
   /** 次に取り消される操作（なければ null） */
@@ -61,6 +63,7 @@ export class UndoService {
    * @param expectedGroup peek で確認した operationGroup。確認後に別の操作が行われていた場合は取り消さない
    */
   undo(eventId: number, expectedGroup: string): UndoCandidate {
+    this.guard.assertNotPending(eventId) // 復旧確認待ち（D-071）
     return runAudited(this.db, this.repos, { eventId, operator: this.operator.get() }, () => {
       const group = this.findCandidate(eventId)
       if (!group) throw new AppError(ErrorCode.NOTHING_TO_UNDO, '取り消せる操作がありません')

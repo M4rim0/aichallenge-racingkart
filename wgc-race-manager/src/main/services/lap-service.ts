@@ -7,6 +7,7 @@ import type { Repositories } from '../repositories'
 import type { MasterClock } from '../clock/master-clock'
 import type { OperatorContext } from './operator-context'
 import { assertAfterStart, assertKeepsOrder, assertNoDuplicate, assertNotFuture, assertValidEpoch } from './pass-record-rules'
+import { noRecoveryGuard, type RecoveryGuard } from './recovery-service'
 
 /**
  * 自チームのラップ記録（仕様 §5、決定 D-005, D-009, D-011, D-016, D-018）。
@@ -20,7 +21,8 @@ export class LapService {
     private readonly db: Db,
     private readonly repos: Repositories,
     private readonly clock: MasterClock,
-    private readonly operator: OperatorContext
+    private readonly operator: OperatorContext,
+    private readonly guard: RecoveryGuard = noRecoveryGuard
   ) {}
 
   /** 算出済みのラップ一覧（有効な記録のみ、周回番号順） */
@@ -33,6 +35,7 @@ export class LapService {
 
   /** LAP REGISTER（その場での登録） */
   register(eventId: number): LapView {
+    this.guard.assertNotPending(eventId) // 復旧確認待ち（D-071）
     const id = runAudited(this.db, this.repos, this.ctx(eventId), () => {
       const event = this.requireEvent(eventId)
       if (event.status !== 'RUNNING' && event.status !== 'PAUSED') {
@@ -65,6 +68,7 @@ export class LapService {
   /** 過去記録の追加 */
   addPast(eventId: number, passedAt: number): LapView {
     assertValidEpoch(passedAt)
+    this.guard.assertNotPending(eventId)
     const id = runAudited(this.db, this.repos, this.ctx(eventId), () => {
       const event = this.requireEvent(eventId)
       const own = this.resolveOwnTeam(eventId, { allowDeleted: true, required: true })!
@@ -91,6 +95,7 @@ export class LapService {
   updatePassedAt(recordId: number, passedAt: number): LapView {
     assertValidEpoch(passedAt)
     const rec = this.requireRecord(recordId)
+    this.guard.assertNotPending(rec.eventId)
     runAudited(this.db, this.repos, this.ctx(rec.eventId), () => {
       const event = this.requireEvent(rec.eventId)
       const sameTeam = this.repos.lapRecords.listByTeam(rec.teamId)
@@ -107,6 +112,7 @@ export class LapService {
   /** 記録の削除（論理削除）。後続の周回番号・ラップタイムは算出時に再構成される */
   delete(recordId: number): void {
     const rec = this.requireRecord(recordId)
+    this.guard.assertNotPending(rec.eventId)
     runAudited(this.db, this.repos, this.ctx(rec.eventId), () => {
       const { before, after } = this.repos.lapRecords.softDelete(recordId)
       return { result: null, changes: [{ action: 'DELETE', targetTable: 'lap_records', targetId: recordId, before, after }] }

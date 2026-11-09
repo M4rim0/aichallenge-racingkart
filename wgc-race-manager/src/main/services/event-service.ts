@@ -11,6 +11,7 @@ import type { Db } from '../db/connection'
 import { runAudited } from '../db/unit-of-work'
 import type { Repositories } from '../repositories'
 import type { OperatorContext } from './operator-context'
+import { noRecoveryGuard, type RecoveryGuard } from './recovery-service'
 
 /**
  * 大会管理（仕様 §3.1）。
@@ -22,7 +23,8 @@ export class EventService {
   constructor(
     private readonly db: Db,
     private readonly repos: Repositories,
-    private readonly operator: OperatorContext
+    private readonly operator: OperatorContext,
+    private readonly guard: RecoveryGuard = noRecoveryGuard
   ) {}
 
   list(): RaceEvent[] {
@@ -51,6 +53,7 @@ export class EventService {
     const errors = validateEventUpdate(patch)
     if (Object.keys(errors).length > 0) throw new AppError(ErrorCode.VALIDATION, '入力内容に誤りがあります', errors)
     const current = this.get(id)
+    this.guard.assertNotPending(id) // 復旧確認待ち（D-071）
     const orderErrors = validateScheduleOrder(
       patch.scheduledStartAt !== undefined ? patch.scheduledStartAt : current.scheduledStartAt,
       patch.scheduledEndAt !== undefined ? patch.scheduledEndAt : current.scheduledEndAt

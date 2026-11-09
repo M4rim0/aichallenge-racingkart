@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import { IpcChannel, type AppInfo, type ClockStatus, type CsvExportResult, type TeamDeletionImpact } from '@shared/ipc-contract'
+import { IpcChannel, type AppInfo, type ClockStatus, type CsvExportResult, type LifecycleStatus, type TeamDeletionImpact } from '@shared/ipc-contract'
+import { appClosingGate } from '../lifecycle/closing-gate'
 import { AppError, ErrorCode } from '@shared/errors'
 import type { EventCreateInput, EventUpdateInput, TeamCreateInput, TeamUpdateInput } from '@shared/validation/event-team'
 import { probeSqliteVersion } from '../db/sqlite-probe'
@@ -148,6 +149,16 @@ export function registerIpcHandlers(ctx: AppContext): void {
     ctx.warnings.acknowledge(asId(eventId, 'eventId'), occurrenceId)
     return null
   })
+  handle(IpcChannel.lifecycleGetStatus, (): LifecycleStatus => ({
+    power: ctx.power.status(),
+    previousShutdown: ctx.previousShutdown,
+    resumeAnomalies: appClosingGate.isClosing() ? [] : ctx.repos.lifecycle.listResumeAnomalies(ctx.clock.bootSessionId),
+    closing: appClosingGate.isClosing(),
+    pendingRecoveries: appClosingGate.isClosing() ? [] : ctx.recovery.listPending()
+  }))
+  handle(IpcChannel.recoveryConfirm, (eventId: unknown, holdId: unknown) =>
+    ctx.recovery.confirm(asId(eventId, 'eventId'), asId(holdId, 'holdId'))
+  )
 }
 
 function asImpact(v: unknown): TeamDeletionImpact {

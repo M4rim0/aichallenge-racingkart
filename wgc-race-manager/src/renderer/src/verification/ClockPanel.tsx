@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { ClockStatus } from '@shared/ipc-contract'
+import type { ClockStatus, LifecycleStatus } from '@shared/ipc-contract'
 import type { RaceClockSnapshot } from '@shared/time/race-clock'
 import { formatDuration, formatJst, parseJst } from '@shared/time/jst'
 
@@ -10,6 +10,7 @@ import { formatDuration, formatJst, parseJst } from '@shared/time/jst'
 export function ClockPanel({ eventId }: { eventId: number | null }): React.JSX.Element {
   const [status, setStatus] = useState<ClockStatus | null>(null)
   const [race, setRace] = useState<RaceClockSnapshot | null>(null)
+  const [life, setLife] = useState<LifecycleStatus | null>(null)
   const [message, setMessage] = useState('')
   const [correction, setCorrection] = useState('')
 
@@ -18,6 +19,8 @@ export function ClockPanel({ eventId }: { eventId: number | null }): React.JSX.E
     const tick = async (): Promise<void> => {
       const s = await window.wgc.clock.getStatus()
       if (alive && s.ok) setStatus(s.value)
+      const l = await window.wgc.lifecycle.getStatus()
+      if (alive && l.ok) setLife(l.value)
       if (eventId !== null) {
         const r = await window.wgc.race.getState(eventId)
         if (alive && r.ok) setRace(r.value)
@@ -59,6 +62,30 @@ export function ClockPanel({ eventId }: { eventId: number | null }): React.JSX.E
           <tr><th>PC実日時（JST）</th><td>{status ? formatJst(status.wallNow) : ''}</td></tr>
           <tr><th>PC実日時 − マスタークロック</th><td>{status ? `${status.wallDriftMs} ms` : ''}</td></tr>
           <tr><th>起動セッション</th><td>{status?.bootSessionId}</td></tr>
+          <tr><th>電源の抑制（段階12）</th><td id="power-state">{life ? (life.power.active ? `抑制中（大会 ${life.power.eventIds.join(', ')}）` : '解除') : ''}</td></tr>
+          <tr><th>前回の終了</th><td id="previous-shutdown">{life ? (life.previousShutdown === null ? '判定対象なし' : life.previousShutdown.clean ? '正常終了' : `異常終了（前回起動 ${formatJst(life.previousShutdown.startedWallAt)}）`) : ''}</td></tr>
+          <tr>
+            <th>復旧確認待ち</th>
+            <td id="recovery-pending">
+              {life ? (life.pendingRecoveries.length === 0 ? 'なし' : life.pendingRecoveries.map((h) => `${h.eventName}（大会 ${h.eventId}、${h.eventStatus}）`).join(' / ')) : ''}
+              {eventId !== null && life?.pendingRecoveries.some((h) => h.eventId === eventId) && (
+                <>
+                  {' '}
+                  <button
+                    id="recovery-confirm"
+                    onClick={async () => {
+                      const h = life.pendingRecoveries.find((x) => x.eventId === eventId)!
+                      const r = await window.wgc.recovery.confirm(eventId, h.holdId)
+                      setMessage(r.ok ? '復旧を確認しました（時計は実際の経過時間で進み続けています）' : `エラー: ${JSON.stringify(r.error)}`)
+                    }}
+                  >
+                    選択中の大会の復旧を確認
+                  </button>
+                </>
+              )}
+            </td>
+          </tr>
+          <tr><th>復帰時の時刻ずれ</th><td id="resume-anomalies">{life ? (life.resumeAnomalies.length === 0 ? 'なし' : life.resumeAnomalies.map((a) => `${formatJst(a.wallAt)}：${a.detail ?? ''}`).join(' / ')) : ''}</td></tr>
         </tbody>
       </table>
       {eventId === null ? (

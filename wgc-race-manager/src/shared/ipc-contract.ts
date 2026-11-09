@@ -6,7 +6,7 @@
 import type { Result } from './errors'
 import type { StrategyReport } from './strategy/engine'
 import type { WarningList } from './warnings/types'
-import type { AppSession, LapView, MandatoryStoppage, Memo, Operator, RaceEvent, Team, VehicleData, VehicleDataFields, VehicleDataRow } from './types/entities'
+import type { AppLifecycleEvent, AppSession, LapView, MandatoryStoppage, PreviousShutdownStatus, RecoveryConfirmation, RecoveryHold, Memo, Operator, RaceEvent, Team, VehicleData, VehicleDataFields, VehicleDataRow } from './types/entities'
 import type { RaceClockSnapshot } from './time/race-clock'
 import type {
   EventCreateInput,
@@ -68,7 +68,9 @@ export const IpcChannel = {
   stoppagesDelete: 'stoppages:delete',
   strategyGet: 'strategy:get',
   warningsEvaluate: 'warnings:evaluate',
-  warningsAcknowledge: 'warnings:acknowledge'
+  warningsAcknowledge: 'warnings:acknowledge',
+  lifecycleGetStatus: 'lifecycle:get-status',
+  recoveryConfirm: 'recovery:confirm'
 } as const
 
 export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]
@@ -137,6 +139,17 @@ export interface Standings {
 }
 
 export type CsvExportResult = { cancelled: true } | { cancelled: false; directory: string; files: string[] }
+
+/** 段階12：電源管理・前回の終了状態・復帰時の時刻異常（D-063, D-064, D-066） */
+export interface LifecycleStatus {
+  power: { active: boolean; eventIds: number[] }
+  previousShutdown: PreviousShutdownStatus | null
+  /** この起動中の、スリープ・休止からの復帰で時刻ずれが 5 秒を超えた記録 */
+  resumeAnomalies: AppLifecycleEvent[]
+  closing: boolean
+  /** 異常終了後の復旧確認待ち（D-070）。大会ごと */
+  pendingRecoveries: RecoveryHold[]
+}
 
 /** preload が window.wgc として公開する API */
 export interface WgcApi {
@@ -230,5 +243,12 @@ export interface WgcApi {
     evaluate(eventId: number): Promise<Result<WarningList>>
     /** 確認済みにする（一覧から非表示）。発生ごとの occurrenceId を指定する */
     acknowledge(eventId: number, occurrenceId: string): Promise<Result<null>>
+  }
+  lifecycle: {
+    getStatus(): Promise<Result<LifecycleStatus>>
+  }
+  recovery: {
+    /** 復旧を確認する（時計の再開操作ではない、D-070）。holdId は表示した確認待ちの ID */
+    confirm(eventId: number, holdId: number): Promise<Result<RecoveryConfirmation>>
   }
 }

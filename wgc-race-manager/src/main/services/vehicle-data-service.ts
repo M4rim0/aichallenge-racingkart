@@ -6,6 +6,7 @@ import type { Db } from '../db/connection'
 import { runAudited } from '../db/unit-of-work'
 import type { Repositories } from '../repositories'
 import type { OperatorContext } from './operator-context'
+import { noRecoveryGuard, type RecoveryGuard } from './recovery-service'
 
 const FIELDS = ['speed', 'voltage', 'current', 'integratedValue'] as const
 
@@ -22,7 +23,8 @@ export class VehicleDataService {
   constructor(
     private readonly db: Db,
     private readonly repos: Repositories,
-    private readonly operator: OperatorContext
+    private readonly operator: OperatorContext,
+    private readonly guard: RecoveryGuard = noRecoveryGuard
   ) {}
 
   /** 有効な自チームラップごとの車両データ一覧（削除済みラップは含めない） */
@@ -41,6 +43,7 @@ export class VehicleDataService {
   create(lapRecordId: number, fields: Partial<VehicleDataFields>): VehicleData {
     const input = validateFields(fields)
     const lap = this.requireActiveLap(lapRecordId)
+    this.guard.assertNotPending(lap.eventId) // 復旧確認待ち（D-071）
     return runAudited(this.db, this.repos, this.ctx(lap.eventId), () => {
       if (this.repos.vehicleData.findByLapRecord(lapRecordId)) {
         throw new AppError(ErrorCode.VEHICLE_DATA_EXISTS, 'このラップには既に車両データがあります。修正を使用してください')
@@ -58,6 +61,7 @@ export class VehicleDataService {
     const patch = validateFields(fields)
     const current = this.requireVehicleData(vehicleDataId)
     const lap = this.requireActiveLap(current.lapRecordId)
+    this.guard.assertNotPending(lap.eventId)
     return runAudited(this.db, this.repos, this.ctx(lap.eventId), () => {
       const { before, after } = this.repos.vehicleData.update(vehicleDataId, patch)
       return { result: after, changes: [{ action: 'UPDATE', targetTable: 'vehicle_data', targetId: vehicleDataId, before, after }] }
@@ -68,6 +72,7 @@ export class VehicleDataService {
   delete(vehicleDataId: number): void {
     const current = this.requireVehicleData(vehicleDataId)
     const lap = this.requireActiveLap(current.lapRecordId)
+    this.guard.assertNotPending(lap.eventId)
     runAudited(this.db, this.repos, this.ctx(lap.eventId), () => {
       const { before, after } = this.repos.vehicleData.softDelete(vehicleDataId)
       return { result: null, changes: [{ action: 'DELETE', targetTable: 'vehicle_data', targetId: vehicleDataId, before, after }] }

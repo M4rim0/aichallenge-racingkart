@@ -44,8 +44,33 @@ describe('Warning lifecycle (D-059, D-060)', () => {
     h.time.advance(1000)
     const second = teamPace(h.eval())
     expect(second).toHaveLength(1)
-    expect(second[0]).toMatchObject({ occurrenceId: first[0]!.occurrenceId, phase: 'CONTINUING', raisedAt: first[0]!.raisedAt })
+    // 同じ警告のまま（重複しない）。発生から 10 秒未満なので「新規」のまま（W-10）
+    expect(second[0]).toMatchObject({ occurrenceId: first[0]!.occurrenceId, phase: 'NEW', raisedAt: first[0]!.raisedAt })
     expect(second[0]!.updatedAt).toBeGreaterThan(first[0]!.updatedAt)
+  })
+
+  it('keeps NEW for 10 seconds after raising, then CONTINUING (W-10 boundary)', () => {
+    const h = harness()
+    h.set(paceInput(9.2))
+    const raisedAt = teamPace(h.eval())[0]!.raisedAt
+    h.time.t = raisedAt + 9_999
+    expect(teamPace(h.eval())[0]!.phase).toBe('NEW')
+    h.time.t = raisedAt + 10_000
+    expect(teamPace(h.eval())[0]!.phase).toBe('CONTINUING')
+  })
+
+  it('restarts the 10-second NEW period on escalation', () => {
+    const h = harness()
+    h.set(paceInput(9.2))
+    const w = teamPace(h.eval())[0]!
+    h.time.t = w.raisedAt + 30_000
+    expect(teamPace(h.eval())[0]!.phase).toBe('CONTINUING')
+    const i = paceInput(8.5)
+    h.set({ ...i, now: w.raisedAt + 31_000 })
+    const esc = teamPace(h.eval())[0]!
+    expect(esc).toMatchObject({ occurrenceId: w.occurrenceId, severity: 'CAUTION', phase: 'NEW', escalatedAt: w.raisedAt + 31_000 })
+    h.time.t = w.raisedAt + 31_000 + 10_000
+    expect(teamPace(h.eval())[0]!.phase).toBe('CONTINUING')
   })
 
   it('clears when the condition resolves and re-raises as a new warning', () => {

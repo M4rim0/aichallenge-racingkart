@@ -12,7 +12,7 @@ import type { MasterClock } from '../clock/master-clock'
 import type { StrategyService } from './strategy-service'
 
 /**
- * 警告の状態管理（決定 D-059〜D-061、暫定解釈 W-5, W-10）。
+ * 警告の状態管理（決定 D-059〜D-061、D-069 の W-5・W-10）。
  *
  * - 判定は純粋関数 detectWarnings に任せ、ここでは発生・継続・解除・確認済みを管理する
  * - すべてメモリ上のみ。DB には保存しない。アプリを再起動すると（新しいインスタンスになり）すべてリセットされる
@@ -29,6 +29,9 @@ interface EventState {
   /** 予測順位の比較用（W-5）：元データの指紋が変わったときだけ前回値を更新する */
   rank: { fingerprint: string; teamId: number | null; previous: number | null; current: number | null } | null
 }
+
+/** 新規警告の表示を維持する時間（W-10、D-069）：発生または重要度上昇から 10 秒間 */
+export const NEW_WARNING_DURATION_MS = 10_000
 
 export class WarningService {
   private readonly states = new Map<number, EventState>()
@@ -47,7 +50,11 @@ export class WarningService {
     const { warnings, suppressed } = detectWarnings({ report, rankChange })
     const now = this.clock.now()
     this.reconcile(eventId, state, warnings, now)
-    const all = [...state.active.values()]
+    // 「新規」は発生（または重要度上昇）から 10 秒間（W-10）。それ以降は「継続中」
+    const all = [...state.active.values()].map((w) => ({
+      ...w,
+      phase: (now - (w.escalatedAt ?? w.raisedAt) < NEW_WARNING_DURATION_MS ? 'NEW' : 'CONTINUING') as ActiveWarning['phase']
+    }))
     return {
       eventId,
       evaluatedAt: now,

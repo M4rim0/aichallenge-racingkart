@@ -178,3 +178,57 @@ export interface VehicleDataRow {
   /** 未登録なら null */
   vehicleData: VehicleData | null
 }
+
+export const LIFECYCLE_KINDS = ['BOOT', 'CLEAN_SHUTDOWN', 'SUSPEND', 'RESUME'] as const
+export type LifecycleKind = (typeof LIFECYCLE_KINDS)[number]
+
+/** 起動・正常終了・スリープ／復帰の記録（D-064, D-066）。追記専用 */
+export interface AppLifecycleEvent {
+  id: number
+  bootSessionId: string
+  kind: LifecycleKind
+  /** マスタークロック日時 */
+  at: EpochMs
+  /** PC 実日時 */
+  wallAt: EpochMs
+  monoMs: number | null
+  /** RESUME：復帰時の「PC 実日時 − マスタークロック」 */
+  driftMs: number | null
+  /** RESUME：ずれの変化がしきい値（5 秒）を超えた */
+  anomaly: boolean
+  detail: string | null
+  createdAt: EpochMs
+}
+
+/** 前回の起動の終了状態（D-066） */
+export interface PreviousShutdownStatus {
+  bootSessionId: string
+  startedWallAt: EpochMs
+  /** true：正常終了の記録あり / false：正常終了の記録なし（異常終了） */
+  clean: boolean
+}
+
+/** 復旧確認待ち（D-070〜D-072）。確認されるまで、その大会のレースに影響する操作を受け付けない */
+export interface RecoveryHold {
+  holdId: number
+  eventId: number
+  eventName: string
+  /** 異常終了を検出した時点の大会の状態（そのまま維持される） */
+  eventStatus: 'RUNNING' | 'PAUSED'
+  /** 確認待ちを作成した起動 */
+  bootSessionId: string
+  /** 異常終了した（正常終了の記録がない）起動 */
+  crashedSessionId: string | null
+  /** 作成日時（マスタークロック） */
+  createdAt: EpochMs
+}
+
+/** 復旧確認の記録 */
+export interface RecoveryConfirmation {
+  confirmId: number
+  holdId: number
+  eventId: number
+  operatorId: number | null
+  operatorNameSnapshot: string | null
+  confirmedAt: EpochMs
+}

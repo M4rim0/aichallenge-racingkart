@@ -2,9 +2,10 @@ import type { StrategyReport, TeamStrategy, Uncertainty } from '../strategy/engi
 import { SCENARIOS, type ScenarioId } from '../strategy/pace'
 
 /**
- * 警告判定エンジン（仕様 §8.10、決定 D-056〜D-062、暫定解釈 W-1〜W-11）。
+ * 警告判定エンジン（仕様 §8.10、決定 D-056〜D-062, D-069）。
  * 純粋関数：戦略計算の結果（StrategyReport）から、その時点で成立している警告の一覧を返す。
  * 発生・継続・解除・確認済みの状態管理は行わない（サービス層の責務）。
+ * 暫定解釈 W-1〜W-11 は D-069 で正式化済み（W-2 は後方の全チームを時間差条件で判定）。
  */
 
 export const SEVERITIES = ['INFO', 'CAUTION', 'CRITICAL'] as const
@@ -48,6 +49,8 @@ export const WARNING_THRESHOLDS = {
 
 /** 浮動小数点の誤差で境界値（ちょうど 5% など）を取りこぼさないための許容差 */
 const EPS = 1e-9
+/** 時間差（ms）の境界判定の許容差（推定時間差の計算誤差を吸収。1 マイクロ秒未満） */
+const GAP_EPS_MS = 1e-3
 
 export type RearKind =
   /** 予測順位が入れ替わる（追い抜かれる）可能性 */
@@ -183,21 +186,20 @@ export function detectWarnings(input: DetectInput): DetectResult {
         predSev = d
       }
 
-      // 時間差による下限（W-2）：直下のチームのみ。記録が古ければ使わない
+      // 時間差による下限（W-2、D-069）：後方の全チームが対象。時間差が条件を満たした場合のみ。記録が古ければ使わない
       let gapSev: Severity | null = null
       let gapMs: number | null = null
       let gapMeasured = false
-      if (own.behind?.teamId === t.teamId) {
-        const g = own.behind.measuredTimeGapMs ?? own.behind.estimatedTimeGapMs
-        gapMeasured = own.behind.measuredTimeGapMs !== null
-        if (g !== null) {
-          if (overdue(own, 'avg5') || overdue(t, 'avg5')) {
-            suppressed.push({ type: 'REAR_APPROACH', teamId: t.teamId, reason: 'STALE_RECORD', detail: '記録が古いため時間差を判定に使用しない' })
-          } else {
-            gapMs = Math.max(0, g)
-            if (gapMs <= WARNING_THRESHOLDS.rearGapCriticalMs) gapSev = 'CRITICAL'
-            else if (gapMs <= WARNING_THRESHOLDS.rearGapCautionMs) gapSev = 'CAUTION'
-          }
+      const gap = rearGap(own, t)
+      if (gap !== null) {
+        gapMeasured = gap.measured
+        if (overdue(own, 'avg5') || overdue(t, 'avg5')) {
+          suppressed.push({ type: 'REAR_APPROACH', teamId: t.teamId, reason: 'STALE_RECORD', detail: '記録が古いため時間差を判定に使用しない' })
+        } else {
+          gapMs = Math.max(0, gap.ms)
+          if (gapMs <= WARNING_THRESHOLDS.rearGapCriticalMs + GAP_EPS_MS) gapSev = 'CRITICAL'
+          else if (gapMs <= WARNING_THRESHOLDS.rearGapCautionMs + GAP_EPS_MS) gapSev = 'CAUTION'
+          else gapMs = null // 条件を満たさない時間差は根拠に含めない
         }
       }
 
@@ -320,6 +322,22 @@ export function detectWarnings(input: DetectInput): DetectResult {
       a.key.localeCompare(b.key)
   )
   return { warnings, suppressed }
+}
+
+/**
+ * 自チームと後方チームの時間差（W-2、D-069。段階10の定義と同じ）。
+ * - 同じ周回数：その周回の通過時刻の差（実測）
+ * - 周回数が異なる：推定走行位置の差 × 後方チームの 5 周平均ペース（推定）。最終通過時刻の単純な差は使わない
+ */
+export function rearGap(own: TeamStrategy, t: TeamStrategy): { ms: number; measured: boolean } | null {
+  if (own.current.laps === t.current.laps && own.current.lastPassAt !== null && t.current.lastPassAt !== null) {
+    return { ms: t.current.lastPassAt - own.current.lastPassAt, measured: true }
+  }
+  const qo = own.scenarios.avg5.position?.q ?? null
+  const qt = t.scenarios.avg5.position?.q ?? null
+  const pt = t.scenarios.avg5.paceMs
+  if (qo === null || qt === null || pt === null) return null
+  return { ms: (qo - qt) * pt, measured: false }
 }
 
 /** ③⑤ 共通：3 周平均と 10 周平均の比較 */

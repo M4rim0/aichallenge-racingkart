@@ -4,6 +4,7 @@ import type { Db } from '../db/connection'
 import { runAudited } from '../db/unit-of-work'
 import type { Repositories } from '../repositories'
 import type { OperatorContext } from './operator-context'
+import { noRecoveryGuard, type RecoveryGuard } from './recovery-service'
 
 /**
  * 強制停止時間（仕様 §4.5、決定 D-044）。
@@ -16,7 +17,8 @@ export class StoppageService {
   constructor(
     private readonly db: Db,
     private readonly repos: Repositories,
-    private readonly operator: OperatorContext
+    private readonly operator: OperatorContext,
+    private readonly guard: RecoveryGuard = noRecoveryGuard
   ) {}
 
   list(eventId: number): MandatoryStoppage[] {
@@ -27,6 +29,7 @@ export class StoppageService {
   create(eventId: number, startsAt: unknown, endsAt: unknown): MandatoryStoppage {
     const { s, e } = validate(startsAt, endsAt)
     this.requireEvent(eventId)
+    this.guard.assertNotPending(eventId) // 復旧確認待ち（D-071）
     return runAudited(this.db, this.repos, { eventId, operator: this.operator.get() }, () => {
       const created = this.repos.stoppages.insert({ eventId, startsAt: s, endsAt: e })
       return { result: created, changes: [{ action: 'CREATE', targetTable: 'mandatory_stoppages', targetId: created.id, before: null, after: created }] }
@@ -37,6 +40,7 @@ export class StoppageService {
   update(id: number, startsAt: unknown, endsAt: unknown): MandatoryStoppage {
     const { s, e } = validate(startsAt, endsAt)
     const current = this.require(id)
+    this.guard.assertNotPending(current.eventId)
     return runAudited(this.db, this.repos, { eventId: current.eventId, operator: this.operator.get() }, () => {
       const { before, after } = this.repos.stoppages.update(id, { startsAt: s, endsAt: e })
       return { result: after, changes: [{ action: 'UPDATE', targetTable: 'mandatory_stoppages', targetId: id, before, after }] }
@@ -45,6 +49,7 @@ export class StoppageService {
 
   delete(id: number): void {
     const current = this.require(id)
+    this.guard.assertNotPending(current.eventId)
     runAudited(this.db, this.repos, { eventId: current.eventId, operator: this.operator.get() }, () => {
       const { before, after } = this.repos.stoppages.softDelete(id)
       return { result: null, changes: [{ action: 'DELETE', targetTable: 'mandatory_stoppages', targetId: id, before, after }] }

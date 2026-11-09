@@ -7,6 +7,7 @@ import { runAudited, type AuditedChange } from '../db/unit-of-work'
 import type { Repositories } from '../repositories'
 import type { MasterClock } from '../clock/master-clock'
 import type { OperatorContext } from './operator-context'
+import { noRecoveryGuard, type RecoveryGuard } from './recovery-service'
 
 const STATUS_LABEL = { PREPARING: '準備中', RUNNING: '走行中', PAUSED: '一時停止中', FINISHED: '終了' } as const
 
@@ -19,11 +20,15 @@ const STATUS_LABEL = { PREPARING: '準備中', RUNNING: '走行中', PAUSED: '�
  * - 終了した大会を再開する操作は提供しない（仕様 §12）
  */
 export class RaceClockService {
+  /** 時計の状態遷移が確定した後に呼ばれる（電源管理の再判定、D-063）。例外は記録処理に影響させない */
+  onStateChanged: (() => void) | null = null
+
   constructor(
     private readonly db: Db,
     private readonly repos: Repositories,
     private readonly clock: MasterClock,
-    private readonly operator: OperatorContext
+    private readonly operator: OperatorContext,
+    private readonly guard: RecoveryGuard = noRecoveryGuard
   ) {}
 
   getState(eventId: number): RaceClockSnapshot {
@@ -67,6 +72,7 @@ export class RaceClockService {
       throw new AppError(ErrorCode.VALIDATION, '日時が不正です', { actualStartAt: '日時が不正です' })
     }
     const e = this.requireEvent(eventId)
+    this.guard.assertNotPending(eventId) // 復旧確認待ち（D-071）
     if (e.actualStartAt === null) {
       throw new AppError(ErrorCode.RACE_NOT_STARTED, 'レースが開始されていないため、開始時刻を修正できません')
     }
@@ -103,6 +109,7 @@ export class RaceClockService {
   }
 
   private transition(eventId: number, kind: ClockTransitionKind): RaceClockSnapshot {
+    this.guard.assertNotPending(eventId) // 復旧確認待ち：時計操作を受け付けない（D-071）
     runAudited(this.db, this.repos, { eventId, operator: this.operator.get() }, () => {
       // 状態確認もトランザクション内で行い、二重操作を防ぐ
       const e = this.requireEvent(eventId)
@@ -124,6 +131,11 @@ export class RaceClockService {
       ]
       return { result: null, changes }
     })
+    try {
+      this.onStateChanged?.()
+    } catch (e) {
+      console.error('[race-clock] onStateChanged failed', e)
+    }
     return this.getState(eventId)
   }
 

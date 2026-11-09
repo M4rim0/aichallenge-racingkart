@@ -118,7 +118,7 @@
 | operator_id | 操作者 ID。未選択なら空欄 |
 | operator_name | 操作当時の操作者名（スナップショット）。未選択なら `未設定`（D-032） |
 | action | `CREATE`（追加）/ `UPDATE`（編集・復元）/ `DELETE`（削除）/ `UNDO`（取り消し） |
-| target_table | 対象データ（`events`, `teams`, `lap_records`, `competitor_passes`, `vehicle_data`, `memos`, `operators`, `race_clock_transitions`） |
+| target_table | 対象データ（`events`, `teams`, `lap_records`, `competitor_passes`, `vehicle_data`, `memos`, `operators`, `race_clock_transitions`, `mandatory_stoppages`, `race_recovery_holds`（異常終了後の復旧確認待ちの作成・確認、D-072）） |
 | target_id | 対象データの ID |
 | before_json | 変更前の値（JSON）。追加では空欄 |
 | after_json | 変更後の値（JSON）。削除では論理削除後の値 |
