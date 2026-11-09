@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import { app, BrowserWindow, dialog } from 'electron'
 import { closeAppDatabase, openAppDatabase } from './db/app-database'
+import { createAppContext } from './app-context'
 import { applySessionSecurity, disableExternalOpen, hardenWebContents } from './security'
 import { registerIpcHandlers } from './ipc/register'
 
@@ -28,15 +29,17 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     disableExternalOpen()
     applySessionSecurity(isDev)
+    let db
     try {
-      openAppDatabase(app.getPath('userData'))
+      db = openAppDatabase(app.getPath('userData')).db
     } catch (e) {
       // DB を開けない状態で記録操作を受け付けると記録が失われるため、起動を中止する
       dialog.showErrorBox('データベースを開けませんでした', String(e))
       app.exit(1)
       return
     }
-    registerIpcHandlers()
+    // TODO(段階4): 時刻関数をマスタークロックに差し替える
+    registerIpcHandlers(createAppContext(db, () => Date.now()))
     createMainWindow()
   })
 

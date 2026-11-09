@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AppInfo } from '@shared/ipc-contract'
+import { EventsTeamsPanel } from './EventsTeamsPanel'
 
 /**
  * 検証用画面（決定 D-004）。
@@ -20,22 +21,23 @@ export function VerificationApp(): React.JSX.Element {
   return (
     <main>
       <h1>検証用画面（正式UIではありません）</h1>
-      <h2>起動・DB確認</h2>
-      {error && <p>エラー: {error}</p>}
-      {info ? (
-        <table>
-          <tbody>
-            {Object.entries(info).map(([k, v]) => (
-              <tr key={k}>
-                <th>{k}</th>
-                <td>{v}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        !error && <p>読み込み中…</p>
-      )}
+      <details>
+        <summary>起動・DB確認</summary>
+        {error && <p>エラー: {error}</p>}
+        {info && (
+          <table>
+            <tbody>
+              {Object.entries(info).map(([k, v]) => (
+                <tr key={k}>
+                  <th>{k}</th>
+                  <td>{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </details>
+      <EventsTeamsPanel />
     </main>
   )
 }
