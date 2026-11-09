@@ -245,3 +245,93 @@ describe('Integration with the app (DB, clock, UNDO)', () => {
     expect(ctx.warnings.evaluate(event.id).visible).toEqual([])
   })
 })
+
+describe('Stale records do not clear existing warnings (decision B, 2026-11-10)', () => {
+  /** 9.5 分 × 8 周の後に 12 分のラップが続き、その後 9.5 分に戻るチーム（初回通過 2 分）。分単位で評価する */
+  function faderRun(lapTimes: number[], onEach: (min: number, l: ReturnType<WarningService['evaluate']>, svc: WarningService) => void) {
+    const time = new FakeNow(T0)
+    const clock = new MasterClock(time, 'boot-fader')
+    const passes = laps(2, lapTimes)
+    let cur = input([team(2, 'Fader', [2])], 3)
+    const svc = new WarningService({ buildInput: () => ({ ...cur, now: clock.now() }) } as unknown as StrategyService, clock)
+    for (let m = 2; m <= passes.at(-1)! + 5; m++) {
+      time.t = T0 + m * M
+      cur = input([team(2, 'Fader', passes.filter((p) => p <= m))], m)
+      onEach(m, svc.evaluate(1), svc)
+    }
+    return passes
+  }
+  const slow = [9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 12, 12, 12, 12, 12, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5]
+  const levels: Record<string, number> = { INFO: 1, CAUTION: 2, CRITICAL: 3 }
+
+  it('keeps one occurrence through the stale windows between slow laps (no re-raise every lap)', () => {
+    const occurrences = new Set<string>()
+    let staleWhileActive = 0
+    let prev: { id: string; severity: string } | null = null
+    faderRun(slow, (_m, l) => {
+      const w = l.visible.find((x) => x.key === 'TEAM_PACE:2:SLOWER')
+      const stale = l.suppressed.some((s) => s.type === 'TEAM_PACE' && s.teamId === 2 && s.reason === 'STALE_RECORD')
+      if (w) {
+        occurrences.add(w.occurrenceId)
+        if (stale && prev) {
+          staleWhileActive++
+          // 記録が古い間は、重要度を引き上げない（維持される）
+          expect(w.severity).toBe(prev.severity)
+          expect(w.occurrenceId).toBe(prev.id)
+        }
+        prev = { id: w.occurrenceId, severity: w.severity }
+      }
+    })
+    expect(staleWhileActive, '記録が古くなる区間があり、その間も警告が維持されたこと').toBeGreaterThan(0)
+    expect(occurrences.size, '1 周ごとに新規発生し直さない（同じ警告のまま）').toBe(1)
+  })
+
+  it('keeps the acknowledgement through stale windows; only escalation shows it again', () => {
+    let acked: { id: string; severity: string } | null = null
+    let reshownByEscalation = 0
+    faderRun(slow, (_m, l, svc) => {
+      const w = l.visible.find((x) => x.key === 'TEAM_PACE:2:SLOWER')
+      if (!w) return
+      if (acked) {
+        // 再表示されるのは、同じ警告の重要度が上がったときだけ
+        expect(w.occurrenceId).toBe(acked.id)
+        expect(levels[w.severity]!).toBeGreaterThan(levels[acked.severity]!)
+        expect(w.escalatedAt).not.toBeNull()
+        reshownByEscalation++
+      }
+      svc.acknowledge(1, w.occurrenceId)
+      acked = { id: w.occurrenceId, severity: w.severity }
+    })
+    expect(acked).not.toBeNull()
+    expect(reshownByEscalation).toBeLessThanOrEqual(2) // 情報 → 注意 → 重大 の上昇分だけ
+  })
+
+  it('still clears the warning when the slowdown is actually over (normal resolution)', () => {
+    let lastSeenAt = -1
+    let clearedAt = -1
+    const passes = faderRun(slow, (m, l) => {
+      const w = l.visible.find((x) => x.key === 'TEAM_PACE:2:SLOWER') ?? (l.acknowledgedCount > 0 ? true : null)
+      if (w) lastSeenAt = m
+      else if (lastSeenAt >= 0 && clearedAt < 0) clearedAt = m
+    })
+    expect(lastSeenAt).toBeGreaterThan(0)
+    expect(clearedAt, 'ペースが戻った後に解除された').toBeGreaterThan(lastSeenAt)
+    // 解除は、遅いラップが終わって 9.5 分のラップが記録された後（原因の解消による通常の解除）
+    const firstFastAfterSlow = passes[14]! // 初回通過 + 8 周 + 遅い 5 周 → 14 番目の通過から 9.5 分に戻る
+    expect(clearedAt).toBeGreaterThan(firstFastAfterSlow)
+  })
+
+  it('does not raise a new warning while the record is stale', () => {
+    // 前日まで 9.5 分 × 10 周 → 最後の通過から長時間通過なし（記録が古い）。ペース低下の警告は新しく出ない
+    const time = new FakeNow(T0)
+    const clock = new MasterClock(time, 'boot-stale')
+    const passes = laps(2, [9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5])
+    let cur = input([team(2, 'Quiet', passes)], passes.at(-1)! + 1)
+    const svc = new WarningService({ buildInput: () => ({ ...cur, now: clock.now() }) } as unknown as StrategyService, clock)
+    for (let m = passes.at(-1)! + 1; m < passes.at(-1)! + 60; m++) {
+      time.t = T0 + m * M
+      cur = { ...cur, now: time.t }
+      expect(svc.evaluate(1).visible).toEqual([])
+    }
+  })
+})

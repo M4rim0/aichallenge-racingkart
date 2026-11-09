@@ -5,6 +5,7 @@ import {
   detectWarnings,
   type RankChangeInput,
   type Severity,
+  type SuppressedWarning,
   type WarningCandidate
 } from '@shared/warnings/detect'
 import type { ActiveWarning, WarningList } from '@shared/warnings/types'
@@ -17,7 +18,7 @@ import type { StrategyService } from './strategy-service'
  * - 判定は純粋関数 detectWarnings に任せ、ここでは発生・継続・解除・確認済みを管理する
  * - すべてメモリ上のみ。DB には保存しない。アプリを再起動すると（新しいインスタンスになり）すべてリセットされる
  * - 警告はキー（種別・チーム・方向）で識別し、同じ条件が続く間は同じ警告（同じ occurrenceId）を維持する
- * - 条件が解消したら解除。再成立したら新しい occurrenceId で発生
+ * - 条件が解消したら解除。再成立したら新しい occurrenceId で発生（「記録が古い」ことだけによる抑制では解除しない：決定 B）
  * - 重要度が上昇したら更新し、確認済みを解除して再表示する（低下時は確認状態を維持）
  * - 確認済みにする操作と条件の解消は独立（確認済みでも条件が続く間は内部的に維持し、解消で消える）
  * - 通知（音・ポップアップ等）は行わない。将来は evaluate の結果（phase = NEW）を通知部に渡して拡張する
@@ -49,7 +50,7 @@ export class WarningService {
     const rankChange = this.updateRankBaseline(state, input, report)
     const { warnings, suppressed } = detectWarnings({ report, rankChange })
     const now = this.clock.now()
-    this.reconcile(eventId, state, warnings, now)
+    this.reconcile(eventId, state, warnings, suppressed, now)
     // 「新規」は発生（または重要度上昇）から 10 秒間（W-10）。それ以降は「継続中」
     const all = [...state.active.values()].map((w) => ({
       ...w,
@@ -83,7 +84,7 @@ export class WarningService {
     return s
   }
 
-  private reconcile(eventId: number, state: EventState, candidates: WarningCandidate[], now: number): void {
+  private reconcile(eventId: number, state: EventState, candidates: WarningCandidate[], suppressed: SuppressedWarning[], now: number): void {
     const seen = new Set<string>()
     for (const c of candidates) {
       seen.add(c.key)
@@ -111,8 +112,16 @@ export class WarningService {
         acknowledged: escalated ? false : prev.acknowledged
       })
     }
-    // 条件が解消した警告は解除（確認済みかどうかに関係なく）
-    for (const key of [...state.active.keys()]) if (!seen.has(key)) state.active.delete(key)
+    // 条件が解消した警告は解除（確認済みかどうかに関係なく）。
+    // ただし「記録が古い」ことだけを理由に判定が抑制された警告は解除しない（決定 B、2026-11-10）：
+    // ID・確認済み状態・重要度をそのまま維持し、新しい通過記録が入った後の通常の判定に任せる。
+    // （記録が古い間に新しく発生させたり重要度を上げたりしないことは、判定側 detectWarnings が保証する）
+    const stale = new Set(suppressed.filter((s) => s.reason === 'STALE_RECORD').map((s) => `${s.type}:${s.teamId}`))
+    for (const [key, w] of [...state.active.entries()]) {
+      if (seen.has(key)) continue
+      if (stale.has(`${w.type}:${w.teamId}`)) continue
+      state.active.delete(key)
+    }
   }
 
   /**

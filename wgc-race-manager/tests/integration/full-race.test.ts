@@ -451,6 +451,8 @@ describe('段階13 自動通しテスト：8 時間・10 チームの仮想レ�
     let rankChangeSeen = false
     let trackedBoot = app.bootNumber
     const faderEvents: string[] = []
+    const faderOccurrences = new Set<string>()
+    const faderEarlyOccurrences = new Set<string>()
 
     for (const step of steps) {
       if (step.at < h.world.t) {
@@ -510,22 +512,23 @@ describe('段階13 自動通しテスト：8 時間・10 チームの仮想レ�
       }
       if (vis.some((w) => w.type === 'PREDICTED_RANK_CHANGE')) rankChangeSeen = true
       const fader = vis.find((w) => w.key === `TEAM_PACE:${id('fader')}:SLOWER`)
+      // 確認済みで非表示の間も含めて、Fader のペース低下の警告の発生（occurrenceId）を数える
+      const faderAny = fader ?? (faderAcked && last.warnings && last.warnings.acknowledgedCount > 0 ? faderAcked : null)
+      // 360 分以降（ペース低下の区間）を数える。それより前の警告は、未登録の強制停止をまたいだラップによるもの（全チーム共通、登録後に解除）
+      if (faderAny) (h.world.t >= at(360) ? faderOccurrences : faderEarlyOccurrences).add(`起動${app.bootNumber}:${faderAny.occurrenceId}@${formatJst(h.world.t).slice(11, 16)}`.split('@')[0]!)
       if (fader) {
         faderSlowSeen = true
         if (!faderAcked) {
           ctx.warnings.acknowledge(event.id, fader.occurrenceId) // 確認済みにする
           faderAcked = { occurrenceId: fader.occurrenceId, severity: fader.severity }
         } else {
-          // 確認済みの警告が再表示されてよいのは、(a) 同じ警告の重要度が上がった場合、(b) 解消後に新しい警告として再発生した場合（D-060）
+          // 決定 B：ペースが落ちている間、記録が古い区間でも警告は解除されず、1 周ごとに新規発生し直さない。
+          // 確認済みの警告が再表示されるのは、同じ警告の重要度が上がった場合だけ
           const levels: Record<string, number> = { INFO: 1, CAUTION: 2, CRITICAL: 3 }
-          const sameOccurrence = fader.occurrenceId === faderAcked.occurrenceId
-          faderEvents.push(`${formatJst(h.world.t)} ${sameOccurrence ? '同じ警告' : '新しい警告'} ${faderAcked.severity}→${fader.severity}`)
-          if (sameOccurrence) {
-            expect(levels[fader.severity]! > levels[faderAcked.severity]!, '確認済みの同じ警告が、重要度上昇なしに再表示された').toBe(true)
-            expect(fader.escalatedAt).not.toBeNull()
-          } else {
-            expect(fader.phase).toBe('NEW')
-          }
+          faderEvents.push(`${formatJst(h.world.t)} ${fader.occurrenceId === faderAcked.occurrenceId ? '同じ警告' : '新しい警告'} ${faderAcked.severity}→${fader.severity}`)
+          expect(fader.occurrenceId, 'Fader の警告が新しい警告として発生し直した（1 周ごとの再発生）').toBe(faderAcked.occurrenceId)
+          expect(levels[fader.severity]! > levels[faderAcked.severity]!, '確認済みの同じ警告が、重要度上昇なしに再表示された').toBe(true)
+          expect(fader.escalatedAt).not.toBeNull()
           ctx.warnings.acknowledge(event.id, fader.occurrenceId)
           faderAcked = { occurrenceId: fader.occurrenceId, severity: fader.severity }
         }
@@ -546,6 +549,8 @@ describe('段階13 自動通しテスト：8 時間・10 チームの仮想レ�
     expect(faderSlowSeen, 'Fader のペース低下の警告が発生した').toBe(true)
     // Fader のペースが戻った後（10 周平均に遅いラップが残る間を除く）、低下の警告は解除されている
     expect(stats.warningsSeen.has(`TEAM_PACE:${id('fader')}:SLOWER`)).toBe(true)
+    // ペースが落ちていた区間（360 分以降、再起動なし）を通じて、Fader のペース低下の警告は 1 つだけ（決定 B）
+    expect([...faderOccurrences], 'Fader のペース低下の警告は 1 回だけ発生し、1 周ごとに発生し直さない').toHaveLength(1)
 
     // 終了後：警告は出ない（W-8）、予測は実績どおり
     const finalWarnings = ctx.warnings.evaluate(event.id)
@@ -624,7 +629,8 @@ describe('段階13 自動通しテスト：8 時間・10 チームの仮想レ�
     console.log(
       `[段階13 通しテスト] 通過記録 ${total} 件（実況 ${stats.passes} 件の登録操作を含む）、検証 ${stats.checks} 回、` +
         `警告キー ${stats.warningsSeen.size} 種類、起動 ${h.require().bootNumber} 回\n` +
-        `  Fader の確認済み警告の再表示: ${faderEvents.join(' / ') || 'なし'}`
+        `  Fader の確認済み警告の再表示（重要度上昇のみ）: ${faderEvents.join(' / ') || 'なし'}\n` +
+        `  Fader の警告の発生: 360 分以降 ${[...faderOccurrences].join(', ')} / それ以前（未登録の強制停止による） ${[...faderEarlyOccurrences].join(', ') || 'なし'}`
     )
     void log
   }, 120_000)
