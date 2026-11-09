@@ -1,7 +1,7 @@
 # 実装計画・ディレクトリ構成案（v0.1 対応）
 
 > 基準文書：[spec-v0.1.md](./spec-v0.1.md)
-> 状態：計画は承認済み（確定事項は [decisions.md](./decisions.md)）。段階1 完了。
+> 状態：計画は承認済み（確定事項は [decisions.md](./decisions.md)）。段階1・2 完了。
 > 段階1で確定したバージョンは [dev-setup.md](./dev-setup.md) を参照。
 
 ---
@@ -139,16 +139,23 @@ wgc-race-manager/
 |---|---|
 | events | id, name, held_on, course_name, lap_distance_m, scheduled_start_at, scheduled_end_at, actual_start_at, actual_end_at, status(PREPARING/RUNNING/PAUSED/FINISHED) |
 | teams | id, event_id, name, bib_number, color, is_own_team, deleted_at — 部分一意インデックス `UNIQUE(event_id) WHERE is_own_team=1 AND deleted_at IS NULL` |
-| lap_records | id, event_id, team_id, passed_at, passed_wall_at（※）, deleted_at — 周回番号・ラップタイムは論点 A-6 |
-| vehicle_data | id, lap_record_id(UNIQUE), speed_kmh, voltage_v, current_a, integrated_value — 全て **NULL 可**（空欄≠0）。数値は REAL、積算値は単位未確定のため入力文字列そのままも保持するか確認（論点 A-9） |
-| competitor_passes | id, event_id, team_id, passed_at, passed_wall_at（※）, deleted_at |
+| lap_records | id, event_id, team_id, passed_at, passed_wall_at（※）, boot_session_id, deleted_at — 周回番号・ラップタイムは保存せず算出（D-005） |
+| vehicle_data | id, lap_record_id（有効行で UNIQUE）, speed, voltage, current, integrated_value — 4 項目とも **入力文字列のまま TEXT**、空欄は NULL（D-006） |
+| competitor_passes | id, event_id, team_id, passed_at, passed_wall_at（※）, boot_session_id, deleted_at |
 | operators | id, name, deleted_at |
 | memos | id, event_id, body, noted_at, deleted_at |
-| operation_history | id, event_id, operator_id, operator_name_snapshot, operated_at, action(CREATE/UPDATE/DELETE/UNDO), target_table, target_id, before_json, after_json, undone_by_history_id |
-| race_clock_transitions | id, event_id, kind(START/PAUSE/RESUME/END), wall_at, mono_ms, boot_session_id |
+| operation_history | id, event_id, operator_id, operator_name_snapshot, operated_at, action(CREATE/UPDATE/DELETE/UNDO), target_table, target_id, before_json, after_json, undo_of_history_id, note — 追記専用 |
+| race_clock_transitions | id, event_id, kind(START/PAUSE/RESUME/END), at, wall_at, mono_ms, boot_session_id — 追記専用 |
 | mandatory_stoppages | id, event_id, starts_at, ends_at, deleted_at |
 
-※ `passed_at` と `passed_wall_at` の 2 本立ては論点 A-3 の結論次第。
+※ `passed_at` と `passed_wall_at` の 2 本立ては論点 A-3 の結論次第（列は段階2で用意済み）。
+
+段階2で追加した DB レベルの保護：
+- 全テーブルで物理削除（DELETE）をトリガーで拒否
+- operation_history / race_clock_transitions は UPDATE も拒否（追記専用）
+- 通過記録・ラップ記録の team_id が別大会のチームを指す場合は拒否
+- 操作履歴はトランザクション外から記録できない（`runAudited` で変更と同時に記録）
+- チーム削除と順位計算の分離は [design/team-deletion.md](./design/team-deletion.md)（提案中）
 
 ## 5. 時計設計案
 

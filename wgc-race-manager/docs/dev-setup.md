@@ -33,6 +33,16 @@ npm ci
 2. 「検証用画面（正式UIではありません）」と表示され、Electron / Node / SQLite のバージョンが表示されること
 3. もう一度 `npm start` を実行しても 2 つ目のウィンドウが開かず、既存ウィンドウが前面に出ること（二重起動防止）
 
+## 段階2の動作確認（手動）
+
+1. `npm run build` → `npm start`
+2. 検証用画面に `dbPath`（`%APPDATA%\wgc-race-manager\wgc-race-manager.sqlite`）、`dbSchemaVersion` = 1、`dbIntegrity` = ok が表示されること
+3. アプリを終了・再起動しても同じ表示になること
+
+## データの保存場所
+
+`%APPDATA%\wgc-race-manager\wgc-race-manager.sqlite`（WAL モードのため `-wal` / `-shm` ファイルが同じフォルダに作られることがあります。アプリ起動中にこれらを削除・移動しないでください）
+
 ## 固定バージョン（段階1で確定）
 
 | パッケージ | バージョン |

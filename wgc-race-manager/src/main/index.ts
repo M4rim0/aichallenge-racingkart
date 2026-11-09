@@ -1,7 +1,14 @@
 import { join } from 'node:path'
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, dialog } from 'electron'
+import { closeAppDatabase, openAppDatabase } from './db/app-database'
 import { applySessionSecurity, disableExternalOpen, hardenWebContents } from './security'
 import { registerIpcHandlers } from './ipc/register'
+
+// オフライン運用（仕様 §1.2, §17「不要なオンライン通信」禁止）：
+// Chromium のコンポーネント更新・バックグラウンド通信を無効化する
+app.commandLine.appendSwitch('disable-component-update')
+app.commandLine.appendSwitch('disable-background-networking')
+app.commandLine.appendSwitch('disable-domain-reliability')
 
 const devServerUrl = process.env['ELECTRON_RENDERER_URL'] ?? null
 const isDev = !app.isPackaged && devServerUrl !== null
@@ -21,12 +28,24 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     disableExternalOpen()
     applySessionSecurity(isDev)
+    try {
+      openAppDatabase(app.getPath('userData'))
+    } catch (e) {
+      // DB を開けない状態で記録操作を受け付けると記録が失われるため、起動を中止する
+      dialog.showErrorBox('データベースを開けませんでした', String(e))
+      app.exit(1)
+      return
+    }
     registerIpcHandlers()
     createMainWindow()
   })
 
   app.on('window-all-closed', () => {
     app.quit()
+  })
+
+  app.on('will-quit', () => {
+    closeAppDatabase()
   })
 }
 

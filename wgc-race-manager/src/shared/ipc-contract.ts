@@ -17,6 +17,10 @@ export interface AppInfo {
   sqlite: string
   platform: string
   userDataPath: string
+  dbPath: string
+  dbSchemaVersion: number
+  /** PRAGMA quick_check の結果（正常時は ok） */
+  dbIntegrity: string
 }
 
 /** preload が window.wgc として公開する API */

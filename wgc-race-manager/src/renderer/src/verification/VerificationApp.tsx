@@ -20,7 +20,7 @@ export function VerificationApp(): React.JSX.Element {
   return (
     <main>
       <h1>検証用画面（正式UIではありません）</h1>
-      <h2>段階1：起動確認</h2>
+      <h2>起動・DB確認</h2>
       {error && <p>エラー: {error}</p>}
       {info ? (
         <table>
