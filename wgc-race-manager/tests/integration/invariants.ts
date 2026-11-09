@@ -13,7 +13,10 @@ export class AppendOnlyWatcher {
       const rows = (db.prepare(`SELECT * FROM ${t} ORDER BY id`).all() as object[]).map((r) => JSON.stringify(r))
       const prev = this.seen.get(t) ?? []
       expect(rows.length, `${label}: ${t} の行が減った`).toBeGreaterThanOrEqual(prev.length)
-      for (let i = 0; i < prev.length; i++) expect(rows[i], `${label}: ${t} の既存行（${i + 1} 行目）が書き換えられた`).toBe(prev[i])
+      // 1 行ずつ expect を呼ぶと行数に比例して遅くなるため、違いが見つかった行だけ expect で報告する（確認内容は同じ）
+      for (let i = 0; i < prev.length; i++) {
+        if (rows[i] !== prev[i]) expect(rows[i], `${label}: ${t} の既存行（${i + 1} 行目）が書き換えられた`).toBe(prev[i])
+      }
       this.seen.set(t, rows)
     }
   }
@@ -53,12 +56,15 @@ export function checkInvariants(ctx: AppContext, eventId: number, label: string,
   const one = <T>(sql: string, ...p: unknown[]) => db.prepare(sql).all(...p) as T[]
 
   // 1. 有効な通過記録には、それを追加した操作履歴（CREATE）がある
+  // （operation_history の target 列には索引がないため、SQL の NOT EXISTS だと記録数 × 履歴数の走査になる。
+  //   履歴を 1 回だけ読んで照合する。確認内容は同じ）
+  const created = new Set(
+    one<{ k: string }>(`SELECT target_table || ':' || target_id AS k FROM operation_history WHERE action = 'CREATE' AND target_id IS NOT NULL`).map((x) => x.k)
+  )
   for (const table of ['lap_records', 'competitor_passes'] as const) {
-    const orphans = one<{ id: number }>(
-      `SELECT r.id FROM ${table} r WHERE r.event_id = ? AND r.deleted_at IS NULL
-         AND NOT EXISTS (SELECT 1 FROM operation_history h WHERE h.target_table = '${table}' AND h.target_id = r.id AND h.action = 'CREATE')`,
-      eventId
-    )
+    const orphans = one<{ id: number }>(`SELECT id FROM ${table} WHERE event_id = ? AND deleted_at IS NULL`, eventId)
+      .filter((r) => !created.has(`${table}:${r.id}`))
+      .map((r) => ({ id: r.id }))
     expect(orphans, `${label}: 操作履歴のない有効な ${table}`).toEqual([])
   }
 

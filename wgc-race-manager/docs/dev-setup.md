@@ -50,6 +50,8 @@ npm ci
 | `npm run build` | `out/` にビルド |
 | `npm start` | ビルド済みのアプリを起動 |
 | `npm test` | 自動テスト（Vitest） |
+| `npm run test:random` | 追加のランダム操作テスト（複数シード × 各 5,000 操作、10 分程度）。`WGC_RANDOM_SEEDS` / `WGC_RANDOM_OPS` で変更可 |
+| `npm test -- tests/integration/performance.test.ts --silent=false` | 性能の記録（平均・最大・p95 を表示、合否判定なし） |
 | `npm run typecheck` | 型チェック |
 
 ## 段階1の動作確認（手動）
@@ -166,6 +168,10 @@ npm ci
 8. 電源ボタン長押しで強制的に電源を切る → 再起動しても起動が停止せず（整合性 ok）、確定済みの記録が残っていること
 9. スリープ・休止して数分後に復帰し、検証用画面の「PC実日時 − マスタークロック」と「復帰時の時刻ずれ」を確認すること（5 秒を超えて変化した場合は警告が出る。Windows の単調時計がスリープ中に止まるかどうかの確認）
 10. ノート PC のフタを閉じたときの動作（アプリでは防げない）と、復帰後の警告
+
+## 段階13 Windows 実機の通しテスト
+
+手順と記録シートは [docs/test/windows-full-race.md](test/windows-full-race.md) を参照（**強制停止は開始時点で登録すること**）。未解決事項は [docs/open-issues.md](open-issues.md)。
 
 ## データの保存場所
 

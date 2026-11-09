@@ -12,6 +12,7 @@
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
+    "test:random": "node scripts/test-random.mjs",
     "test:watch": "vitest"
   },
   "engines": {
