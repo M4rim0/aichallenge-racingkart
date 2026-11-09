@@ -585,6 +585,16 @@
   - 発生（システム）と確認（操作者名のスナップショット付き）は操作履歴にも追記する（UNDO の対象外）。既存の時計操作記録・ラップ記録・操作履歴は変更しない。
   - 複数の大会が進行中だった場合は、大会ごとに確認待ち・確認を管理する。
 
+## D-073 Electron 33.4.11 への統一
+
+- 日付：2026-11-10
+- 決定：Electron を **33.4.11** に固定する（同じ Windows PC で別アプリ（SRC）が Electron 33.4.11 で起動した実績を優先。45.2.3 から変更）。
+- 伴う変更：
+  - better-sqlite3 13 は Electron 33（内部 Node 20.18 / N-API 9）でデータベースを開くと異常終了するため、Electron 33 に対応した **better-sqlite3 12.11.1** に固定する。
+  - better-sqlite3 12 は Node・Electron の ABI ごとに別のバイナリを使う。自動テスト用（システムの Node）は `node_modules`、アプリ用（Electron 33、ABI 130）は `native/electron-v130-<platform>-<arch>/` に置き、アプリはそれを明示的に読み込む。Electron 用は `npm install` / `npm ci` の postinstall（`scripts/fetch-electron-sqlite.mjs`）で配布元のビルド済みバイナリをダウンロードする（C++ のビルドツール不要）。再取得は `npm run setup:native`。
+  - Electron 33 には Windows のシャットダウン事前通知（ウィンドウの `query-session-end`、Electron 34 で追加）がないため、`session-end` だけで対応する（D-067 の実現方法の変更。Windows 実機での確認が必要）。
+- 既知のリスク：npm audit が Electron 33 系に高リスクの脆弱性を報告（33 系はサポート終了）。アプリはオフラインでローカルの画面だけを読み込み、Renderer はサンドボックス化・Node 無効・外部通信禁止の構成のため影響は限定的だが、ゼロではない。将来、同じ PC で新しい Electron が起動できることを確認できれば更新を検討する。
+
 ---
 
 ## 未確定（着手前に確認するもの）

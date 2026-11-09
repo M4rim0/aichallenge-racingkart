@@ -1,5 +1,5 @@
-import Database from 'better-sqlite3'
 import { configure } from '../db/connection'
+import { openSqlite } from '../db/sqlite-native'
 import type { ClosingGate } from './closing-gate'
 
 /**
@@ -76,7 +76,7 @@ export function appendCleanShutdownRecord(
   dbPath: string,
   rec: { bootSessionId: string; at: number; wallAt: number; monoMs: number }
 ): void {
-  const db = new Database(dbPath, { fileMustExist: true })
+  const db = openSqlite(dbPath, { fileMustExist: true })
   try {
     configure(db)
     db.transaction(() => {

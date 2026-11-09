@@ -5,7 +5,7 @@
 - 基準文書: [docs/spec-v0.1.md](docs/spec-v0.1.md)
 - 実装計画: [docs/implementation-plan.md](docs/implementation-plan.md)
 - 確定事項: [docs/decisions.md](docs/decisions.md)
-- 開発環境: [docs/dev-setup.md](docs/dev-setup.md)
+- 開発環境: [docs/dev-setup.md](docs/dev-setup.md)（Electron 33.4.11 / better-sqlite3 12.11.1、D-073。**Windows の S モードでは起動不可**）
 - 設計: [docs/design/](docs/design/)（CSV の列仕様は [csv.md](docs/design/csv.md)、戦略計算は [strategy.md](docs/design/strategy.md)、警告は [warnings.md](docs/design/warnings.md)、復旧・電源管理は [recovery-power.md](docs/design/recovery-power.md)）
 
 ## 進捗

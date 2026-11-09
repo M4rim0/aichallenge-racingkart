@@ -1,4 +1,5 @@
-import Database from 'better-sqlite3'
+import type Database from 'better-sqlite3'
+import { openSqlite } from './sqlite-native'
 import { migrate } from './migrate'
 
 export type Db = Database.Database
@@ -9,7 +10,7 @@ export type Db = Database.Database
  * - foreign_keys=ON：参照整合性
  */
 export function openDatabase(file: string): Db {
-  const db = new Database(file)
+  const db = openSqlite(file)
   try {
     configure(db)
     migrate(db)

@@ -188,10 +188,9 @@ function createMainWindow(context: AppContext): BrowserWindow {
   hardenWebContents(win.webContents, isDev ? devServerUrl : null)
   win.once('ready-to-show', () => win.show())
 
-  // Windows のシャットダウン・ログオフ（D-067）：確認ダイアログを出さず、正常終了の手順で閉じる
-  win.on('query-session-end', () => {
-    osSessionEnding = true
-  })
+  // Windows のシャットダウン・ログオフ（D-067）：確認ダイアログを出さず、正常終了の手順で閉じる。
+  // Electron 33 には事前通知の 'query-session-end' がない（34 で追加）ため、'session-end' で対応する。
+  // 'session-end' で正常終了の手順が始まると終了処理中になり、以後の close では確認ダイアログを出さない（hasActiveRace が false）
   win.on('session-end', () => {
     osSessionEnding = true
     shutdown?.run()

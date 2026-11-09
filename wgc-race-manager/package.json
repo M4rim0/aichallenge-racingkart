@@ -5,6 +5,8 @@
   "description": "WGC race management and strategy support (offline, Windows)",
   "main": "./out/main/index.js",
   "scripts": {
+    "postinstall": "node scripts/fetch-electron-sqlite.mjs",
+    "setup:native": "node scripts/fetch-electron-sqlite.mjs --force",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
@@ -16,7 +18,7 @@
     "node": ">=22.12.0"
   },
   "dependencies": {
-    "better-sqlite3": "13.0.3",
+    "better-sqlite3": "12.11.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "zustand": "5.1.0"
@@ -27,7 +29,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.3.0",
-    "electron": "45.2.3",
+    "electron": "33.4.11",
     "electron-vite": "6.0.0",
     "typescript": "6.0.3",
     "vite": "8.3.6",

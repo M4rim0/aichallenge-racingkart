@@ -1,7 +1,8 @@
 import { copyFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import Database from 'better-sqlite3'
+import type Database from 'better-sqlite3'
+import { openSqlite } from './sqlite-native'
 
 /**
  * 起動時の DB 整合性の事前チェック（決定 D-065）。マイグレーションより前に実行する。
@@ -61,7 +62,7 @@ export function precheckDatabase(dbPath: string, tmpRoot: string = tmpdir()): Pr
     copyFileSync(dbPath, copy)
     const walIncluded = existsSync(walPath)
     if (walIncluded) copyFileSync(walPath, `${copy}-wal`)
-    db = new Database(copy, { fileMustExist: true })
+    db = openSqlite(copy, { fileMustExist: true })
     const integrity = (db.pragma('integrity_check') as { integrity_check: string }[]).map((r) => r.integrity_check)
     const fk = db.pragma('foreign_key_check') as { table: string; rowid: number | null; parent: string; fkid: number }[]
     const ok = integrity.length === 1 && integrity[0] === 'ok' && fk.length === 0

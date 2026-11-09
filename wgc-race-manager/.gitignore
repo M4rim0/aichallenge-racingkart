@@ -4,3 +4,5 @@ dist/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+# Electron 用 SQLite バイナリ（npm install 時にダウンロード）
+native/
