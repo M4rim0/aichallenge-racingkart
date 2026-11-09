@@ -1,5 +1,5 @@
 import { app, ipcMain } from 'electron'
-import { IpcChannel, type AppInfo, type TeamDeletionImpact } from '@shared/ipc-contract'
+import { IpcChannel, type AppInfo, type ClockStatus, type TeamDeletionImpact } from '@shared/ipc-contract'
 import { AppError, ErrorCode } from '@shared/errors'
 import type { EventCreateInput, EventUpdateInput, TeamCreateInput, TeamUpdateInput } from '@shared/validation/event-team'
 import { probeSqliteVersion } from '../db/sqlite-probe'
@@ -45,6 +45,22 @@ export function registerIpcHandlers(ctx: AppContext): void {
     ctx.teams.delete(asId(id), asImpact(impact))
   )
   handle(IpcChannel.teamsRestore, (id: unknown) => ctx.teams.restore(asId(id)))
+
+  handle(IpcChannel.clockGetStatus, (): ClockStatus => ({
+    masterNow: ctx.clock.now(),
+    wallNow: ctx.clock.wallNow(),
+    wallDriftMs: ctx.clock.wallDriftMs(),
+    bootSessionId: ctx.clock.bootSessionId,
+    session: ctx.session
+  }))
+  handle(IpcChannel.raceGetState, (eventId: unknown) => ctx.raceClock.getState(asId(eventId, 'eventId')))
+  handle(IpcChannel.raceStart, (eventId: unknown) => ctx.raceClock.start(asId(eventId, 'eventId')))
+  handle(IpcChannel.racePause, (eventId: unknown) => ctx.raceClock.pause(asId(eventId, 'eventId')))
+  handle(IpcChannel.raceResume, (eventId: unknown) => ctx.raceClock.resume(asId(eventId, 'eventId')))
+  handle(IpcChannel.raceEnd, (eventId: unknown) => ctx.raceClock.end(asId(eventId, 'eventId')))
+  handle(IpcChannel.raceCorrectStart, (eventId: unknown, at: unknown) =>
+    ctx.raceClock.correctActualStart(asId(eventId, 'eventId'), at as number)
+  )
 }
 
 function asImpact(v: unknown): TeamDeletionImpact {

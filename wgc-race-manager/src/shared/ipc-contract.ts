@@ -4,7 +4,8 @@
  * データ操作系はすべて Result<T> を返し、例外は投げない。
  */
 import type { Result } from './errors'
-import type { RaceEvent, Team } from './types/entities'
+import type { AppSession, RaceEvent, Team } from './types/entities'
+import type { RaceClockSnapshot } from './time/race-clock'
 import type {
   EventCreateInput,
   EventUpdateInput,
@@ -23,7 +24,14 @@ export const IpcChannel = {
   teamsUpdate: 'teams:update',
   teamsDeletionImpact: 'teams:deletion-impact',
   teamsDelete: 'teams:delete',
-  teamsRestore: 'teams:restore'
+  teamsRestore: 'teams:restore',
+  clockGetStatus: 'clock:get-status',
+  raceGetState: 'race:get-state',
+  raceStart: 'race:start',
+  racePause: 'race:pause',
+  raceResume: 'race:resume',
+  raceEnd: 'race:end',
+  raceCorrectStart: 'race:correct-start'
 } as const
 
 export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]
@@ -48,6 +56,18 @@ export interface TeamDeletionImpact {
   vehicleData: number
 }
 
+export interface ClockStatus {
+  /** マスタークロックの現在日時（UTC ms） */
+  masterNow: number
+  /** PC の実日時（UTC ms） */
+  wallNow: number
+  /** PC 実日時 − マスタークロック（起動中の OS 時刻変更で 0 から離れる。参考情報） */
+  wallDriftMs: number
+  bootSessionId: string
+  /** この起動セッション（PC 時刻異常の有無、D-013） */
+  session: AppSession | null
+}
+
 /** preload が window.wgc として公開する API */
 export interface WgcApi {
   app: {
@@ -66,5 +86,16 @@ export interface WgcApi {
     deletionImpact(id: number): Promise<Result<TeamDeletionImpact>>
     delete(id: number, confirmedImpact: TeamDeletionImpact): Promise<Result<Team>>
     restore(id: number): Promise<Result<Team>>
+  }
+  clock: {
+    getStatus(): Promise<Result<ClockStatus>>
+  }
+  race: {
+    getState(eventId: number): Promise<Result<RaceClockSnapshot>>
+    start(eventId: number): Promise<Result<RaceClockSnapshot>>
+    pause(eventId: number): Promise<Result<RaceClockSnapshot>>
+    resume(eventId: number): Promise<Result<RaceClockSnapshot>>
+    end(eventId: number): Promise<Result<RaceClockSnapshot>>
+    correctStart(eventId: number, actualStartAt: number): Promise<Result<RaceClockSnapshot>>
   }
 }

@@ -3,14 +3,27 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openDatabase, type Db } from '../../src/main/db/connection'
 import { createRepositories, type Repositories } from '../../src/main/repositories'
+import type { TimeSource } from '../../src/main/clock/master-clock'
 
-/** テスト用の手動時計 */
-export class FakeNow {
+/**
+ * テスト用の手動時計。TimeSource としても使える。
+ * - t：経過の基準（単調時計とともに進む）
+ * - wallOffset：OS の時刻変更をシミュレートする（実日時 = t + wallOffset）
+ */
+export class FakeNow implements TimeSource {
+  wallOffset = 0
   constructor(public t = Date.UTC(2026, 9, 1, 0, 0, 0)) {}
   readonly fn = (): number => this.t
   advance(ms: number): number {
     this.t += ms
     return this.t
+  }
+  wallNow(): number {
+    return this.t + this.wallOffset
+  }
+  monoNow(): number {
+    // 単調時計は起動ごとに任意の原点を持つ。ここでは固定の原点からの差とする
+    return this.t - 1_000_000_000_000
   }
 }
 

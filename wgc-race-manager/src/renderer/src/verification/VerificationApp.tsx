@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AppInfo } from '@shared/ipc-contract'
 import { EventsTeamsPanel } from './EventsTeamsPanel'
+import { ClockPanel } from './ClockPanel'
 
 /**
  * 検証用画面（決定 D-004）。
@@ -10,6 +11,7 @@ import { EventsTeamsPanel } from './EventsTeamsPanel'
 export function VerificationApp(): React.JSX.Element {
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<number | null>(null)
 
   useEffect(() => {
     window.wgc.app
@@ -37,7 +39,8 @@ export function VerificationApp(): React.JSX.Element {
           </table>
         )}
       </details>
-      <EventsTeamsPanel />
+      <EventsTeamsPanel selected={selected} setSelected={setSelected} />
+      <ClockPanel eventId={selected} />
     </main>
   )
 }

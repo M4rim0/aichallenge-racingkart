@@ -1,7 +1,7 @@
 # 実装計画・ディレクトリ構成案（v0.1 対応）
 
 > 基準文書：[spec-v0.1.md](./spec-v0.1.md)
-> 状態：計画は承認済み（確定事項は [decisions.md](./decisions.md)）。段階1〜3 完了。
+> 状態：計画は承認済み（確定事項は [decisions.md](./decisions.md)）。段階1〜4 完了。
 > 段階1で確定したバージョンは [dev-setup.md](./dev-setup.md) を参照。
 
 ---
@@ -163,7 +163,9 @@ wgc-race-manager/
   以後の「マスタークロック日時」は `wall0 + (performance.now() - mono0)` で算出。OS 時刻変更の影響を受けない。
 - **レース経過時間**：`race_clock_transitions` を時系列に畳み込み、RUNNING 区間の合計で算出。
   同一起動中の区間は単調時計差で、起動をまたぐ区間は保存済み実日時の差で算出（仕様 §4.4「再起動後は保存済みの日時情報を基準に復元」）。
-- 起動時に OS 時刻が最後に保存された日時より過去になっている場合は**異常として検出し通知**（自動補正はしない）。
+- 起動時に OS 時刻が最後に保存された日時より過去になっている場合は**異常として検出し通知**（自動補正はしない）。異常は `app_sessions.clock_anomaly` に記録し、各記録の `boot_session_id` で識別できる（D-013、migration 002）。
+- 実際の開始時刻の修正（D-012）は `events.actual_start_at` を更新し、START の遷移記録は書き換えない。経過時間の計算では修正後の値を使う。
+- 強制停止時間の拡張点：`RemainingStoppageCalculator`（`src/shared/time/race-clock.ts`）。段階10で S_remaining を実装する（D-014）。
 - 1 起動ごとに `boot_session_id` を発行し、どの起動中の記録かを追跡可能にする。
 
 ## 6. 開発段階と各段階の完了条件

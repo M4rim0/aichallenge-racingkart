@@ -12,9 +12,14 @@ function fmt(ms: number | null): string {
   return ms === null ? '' : new Date(ms).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
 }
 
-export function EventsTeamsPanel(): React.JSX.Element {
+export function EventsTeamsPanel({
+  selected,
+  setSelected
+}: {
+  selected: number | null
+  setSelected: (id: number | null) => void
+}): React.JSX.Element {
   const [events, setEvents] = useState<RaceEvent[]>([])
-  const [selected, setSelected] = useState<number | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [message, setMessage] = useState<string>('')
 
@@ -35,6 +40,9 @@ export function EventsTeamsPanel(): React.JSX.Element {
 
   useEffect(() => {
     void reloadEvents()
+    // 状態（status）の表示を時計操作に追従させる（検証用の簡易更新）
+    const h = setInterval(() => void reloadEvents(), 1000)
+    return () => clearInterval(h)
   }, [reloadEvents])
   useEffect(() => {
     void reloadTeams(selected)

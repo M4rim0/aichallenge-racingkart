@@ -2,6 +2,9 @@ import { join } from 'node:path'
 import { app, BrowserWindow, dialog } from 'electron'
 import { closeAppDatabase, openAppDatabase } from './db/app-database'
 import { createAppContext } from './app-context'
+import { MasterClock } from './clock/master-clock'
+import { registerBootSession } from './clock/session-registry'
+import { createRepositories } from './repositories'
 import { applySessionSecurity, disableExternalOpen, hardenWebContents } from './security'
 import { registerIpcHandlers } from './ipc/register'
 
@@ -10,6 +13,9 @@ import { registerIpcHandlers } from './ipc/register'
 app.commandLine.appendSwitch('disable-component-update')
 app.commandLine.appendSwitch('disable-background-networking')
 app.commandLine.appendSwitch('disable-domain-reliability')
+
+// マスタークロックはできるだけ早く（プロセス開始直後に）アンカーを取得する
+const masterClock = new MasterClock()
 
 const devServerUrl = process.env['ELECTRON_RENDERER_URL'] ?? null
 const isDev = !app.isPackaged && devServerUrl !== null
@@ -38,9 +44,23 @@ if (!app.requestSingleInstanceLock()) {
       app.exit(1)
       return
     }
-    // TODO(段階4): 時刻関数をマスタークロックに差し替える
-    registerIpcHandlers(createAppContext(db, () => Date.now()))
-    createMainWindow()
+    const session = registerBootSession(
+      db,
+      createRepositories(db, () => masterClock.now(), masterClock.bootSessionId),
+      masterClock,
+      app.getVersion()
+    )
+    registerIpcHandlers(createAppContext(db, masterClock, session))
+    const win = createMainWindow()
+    if (session.clockAnomaly) {
+      // D-013：警告のみ。保存済みの日時は書き換えない
+      void dialog.showMessageBox(win, {
+        type: 'warning',
+        title: 'PCの時刻に異常があります',
+        message: 'PCの時刻が、保存済みの記録より過去になっています。',
+        detail: `${session.anomalyDetail ?? ''}\n\n記録の日時は自動補正しません。PCの時刻設定を確認してください。この起動中の記録は異常のあったセッションとして識別できます。`
+      })
+    }
   })
 
   app.on('window-all-closed', () => {

@@ -106,6 +106,21 @@ export interface OperationHistoryEntry {
   undoOfHistoryId: number | null
   /** 補足説明（任意） */
   note: string | null
+  /** 操作が行われた起動セッション ID */
+  bootSessionId: string | null
+}
+
+/** アプリの起動セッション（D-013） */
+export interface AppSession {
+  id: string
+  startedWallAt: EpochMs
+  /** 起動時点で DB に保存されていた最新の日時 */
+  latestSavedAtBefore: EpochMs | null
+  /** 起動時の PC 時刻が latestSavedAtBefore より過去だった */
+  clockAnomaly: boolean
+  anomalyDetail: string | null
+  appVersion: string | null
+  createdAt: EpochMs
 }
 
 export const CLOCK_TRANSITION_KINDS = ['START', 'PAUSE', 'RESUME', 'END'] as const

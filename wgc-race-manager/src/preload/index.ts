@@ -21,6 +21,17 @@ const api: WgcApi = {
     deletionImpact: (id) => invoke(IpcChannel.teamsDeletionImpact, id),
     delete: (id, impact) => invoke(IpcChannel.teamsDelete, id, impact),
     restore: (id) => invoke(IpcChannel.teamsRestore, id)
+  },
+  clock: {
+    getStatus: () => invoke(IpcChannel.clockGetStatus)
+  },
+  race: {
+    getState: (eventId) => invoke(IpcChannel.raceGetState, eventId),
+    start: (eventId) => invoke(IpcChannel.raceStart, eventId),
+    pause: (eventId) => invoke(IpcChannel.racePause, eventId),
+    resume: (eventId) => invoke(IpcChannel.raceResume, eventId),
+    end: (eventId) => invoke(IpcChannel.raceEnd, eventId),
+    correctStart: (eventId, at) => invoke(IpcChannel.raceCorrectStart, eventId, at)
   }
 }
 

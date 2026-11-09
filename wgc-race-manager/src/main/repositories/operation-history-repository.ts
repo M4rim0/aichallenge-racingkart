@@ -29,7 +29,11 @@ export class OperationHistoryRepository extends BaseRepository<
   Exclude<keyof OperationHistoryEntry, 'id'> & string,
   never
 > {
-  constructor(db: Db, now: Now) {
+  constructor(
+    db: Db,
+    now: Now,
+    private readonly bootSessionId: string | null = null
+  ) {
     super(db, now, {
       table: 'operation_history',
       columns: {
@@ -44,7 +48,8 @@ export class OperationHistoryRepository extends BaseRepository<
         beforeJson: 'before_json',
         afterJson: 'after_json',
         undoOfHistoryId: 'undo_of_history_id',
-        note: 'note'
+        note: 'note',
+        bootSessionId: 'boot_session_id'
       },
       insertable: [],
       updatable: [],
@@ -60,8 +65,8 @@ export class OperationHistoryRepository extends BaseRepository<
       .prepare(
         `INSERT INTO operation_history
          (event_id, operator_id, operator_name_snapshot, operated_at, action, target_table, target_id,
-          before_json, after_json, undo_of_history_id, note)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          before_json, after_json, undo_of_history_id, note, boot_session_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         input.eventId,
@@ -74,7 +79,8 @@ export class OperationHistoryRepository extends BaseRepository<
         input.before === null || input.before === undefined ? null : JSON.stringify(input.before),
         input.after === null || input.after === undefined ? null : JSON.stringify(input.after),
         input.undoOfHistoryId ?? null,
-        input.note ?? null
+        input.note ?? null,
+        this.bootSessionId
       )
     return this.getById(Number(info.lastInsertRowid))
   }

@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { AppError, ErrorCode } from '../../src/shared/errors'
 import { createAppContext, type AppContext } from '../../src/main/app-context'
+import { MasterClock } from '../../src/main/clock/master-clock'
 import { createTestDb, type TestDb } from '../helpers/db'
 
 let t: TestDb
 let ctx: AppContext
 beforeEach(() => {
   t = createTestDb()
-  ctx = createAppContext(t.db, t.clock.fn)
+  ctx = createAppContext(t.db, new MasterClock(t.clock, 'boot-test'))
 })
 afterEach(() => t.cleanup())
 
