@@ -161,3 +161,20 @@ export interface LapView {
   lapTimeMs: number | null
   bootSessionId: string | null
 }
+
+/** 車両データの入力項目（すべて入力文字列。null / 空欄は未入力。D-006, D-027） */
+export interface VehicleDataFields {
+  speed: string | null
+  voltage: string | null
+  current: string | null
+  integratedValue: string | null
+}
+
+/** 車両データ一覧の 1 行（有効な自チームラップごと。D-025） */
+export interface VehicleDataRow {
+  lapRecordId: number
+  lapNumber: number
+  passedAt: EpochMs
+  /** 未登録なら null */
+  vehicleData: VehicleData | null
+}

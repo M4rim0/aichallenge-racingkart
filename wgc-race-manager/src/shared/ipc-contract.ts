@@ -4,7 +4,7 @@
  * データ操作系はすべて Result<T> を返し、例外は投げない。
  */
 import type { Result } from './errors'
-import type { AppSession, LapView, RaceEvent, Team } from './types/entities'
+import type { AppSession, LapView, RaceEvent, Team, VehicleData, VehicleDataFields, VehicleDataRow } from './types/entities'
 import type { RaceClockSnapshot } from './time/race-clock'
 import type {
   EventCreateInput,
@@ -44,7 +44,11 @@ export const IpcChannel = {
   competitorsAddPast: 'competitors:add-past',
   competitorsUpdate: 'competitors:update',
   competitorsDelete: 'competitors:delete',
-  standingsGet: 'standings:get'
+  standingsGet: 'standings:get',
+  vehicleList: 'vehicle:list',
+  vehicleCreate: 'vehicle:create',
+  vehicleUpdate: 'vehicle:update',
+  vehicleDelete: 'vehicle:delete'
 } as const
 
 export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]
@@ -163,5 +167,11 @@ export interface WgcApi {
   }
   standings: {
     get(eventId: number): Promise<Result<Standings>>
+  }
+  vehicleData: {
+    list(eventId: number): Promise<Result<VehicleDataRow[]>>
+    create(lapRecordId: number, fields: Partial<VehicleDataFields>): Promise<Result<VehicleData>>
+    update(vehicleDataId: number, fields: Partial<VehicleDataFields>): Promise<Result<VehicleData>>
+    delete(vehicleDataId: number): Promise<Result<null>>
   }
 }

@@ -10,6 +10,7 @@ import { LapService } from './services/lap-service'
 import { UndoService } from './services/undo-service'
 import { CompetitorService } from './services/competitor-service'
 import { StandingsService } from './services/standings-service'
+import { VehicleDataService } from './services/vehicle-data-service'
 
 export interface AppContext {
   db: Db
@@ -22,6 +23,7 @@ export interface AppContext {
   laps: LapService
   competitors: CompetitorService
   standings: StandingsService
+  vehicleData: VehicleDataService
   undo: UndoService
   /** この起動セッションの情報（PC 時刻異常の有無を含む）。未登録なら null */
   session: AppSession | null
@@ -43,6 +45,7 @@ export function createAppContext(db: Db, clock: MasterClock, session: AppSession
     laps: new LapService(db, repos, clock, operator),
     competitors: new CompetitorService(db, repos, clock, operator),
     standings: new StandingsService(repos),
+    vehicleData: new VehicleDataService(db, repos, operator),
     undo: new UndoService(db, repos, operator)
   }
 }

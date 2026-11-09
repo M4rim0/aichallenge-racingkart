@@ -181,6 +181,9 @@ export class UndoService {
     }
     if (table === 'vehicle_data') {
       const lapId = target['lapRecordId'] as number
+      if (!this.repos.lapRecords.findById(lapId)) {
+        throw conflict('紐づくラップが削除されているため、車両データを戻せません（先にラップを復元してください）')
+      }
       const other = this.repos.vehicleData.findByLapRecord(lapId)
       if (other && other.id !== target.id) throw conflict('このラップには別の車両データが登録されています')
     }

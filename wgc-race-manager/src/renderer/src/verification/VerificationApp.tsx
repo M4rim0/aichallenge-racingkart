@@ -4,6 +4,7 @@ import { EventsTeamsPanel } from './EventsTeamsPanel'
 import { ClockPanel } from './ClockPanel'
 import { LapsPanel } from './LapsPanel'
 import { CompetitorsPanel } from './CompetitorsPanel'
+import { VehiclePanel } from './VehiclePanel'
 
 /**
  * 検証用画面（決定 D-004）。
@@ -44,6 +45,7 @@ export function VerificationApp(): React.JSX.Element {
       <EventsTeamsPanel selected={selected} setSelected={setSelected} />
       <ClockPanel eventId={selected} />
       <LapsPanel eventId={selected} />
+      <VehiclePanel eventId={selected} />
       <CompetitorsPanel eventId={selected} />
     </main>
   )

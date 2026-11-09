@@ -89,6 +89,16 @@ export function registerIpcHandlers(ctx: AppContext): void {
     return null
   })
   handle(IpcChannel.standingsGet, (eventId: unknown) => ctx.standings.get(asId(eventId, 'eventId')))
+
+  handle(IpcChannel.vehicleList, (eventId: unknown) => ctx.vehicleData.listByEvent(asId(eventId, 'eventId')))
+  handle(IpcChannel.vehicleCreate, (lapRecordId: unknown, fields: unknown) =>
+    ctx.vehicleData.create(asId(lapRecordId, 'lapRecordId'), asObject(fields, 'fields'))
+  )
+  handle(IpcChannel.vehicleUpdate, (id: unknown, fields: unknown) => ctx.vehicleData.update(asId(id), asObject(fields, 'fields')))
+  handle(IpcChannel.vehicleDelete, (id: unknown) => {
+    ctx.vehicleData.delete(asId(id))
+    return null
+  })
 }
 
 function asImpact(v: unknown): TeamDeletionImpact {

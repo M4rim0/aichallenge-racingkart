@@ -53,6 +53,12 @@ const api: WgcApi = {
   },
   standings: {
     get: (eventId) => invoke(IpcChannel.standingsGet, eventId)
+  },
+  vehicleData: {
+    list: (eventId) => invoke(IpcChannel.vehicleList, eventId),
+    create: (lapRecordId, fields) => invoke(IpcChannel.vehicleCreate, lapRecordId, fields),
+    update: (id, fields) => invoke(IpcChannel.vehicleUpdate, id, fields),
+    delete: (id) => invoke(IpcChannel.vehicleDelete, id)
   }
 }
 
