@@ -1,7 +1,7 @@
 # 実装計画・ディレクトリ構成案（v0.1 対応）
 
 > 基準文書：[spec-v0.1.md](./spec-v0.1.md)
-> 状態：計画は承認済み（確定事項は [decisions.md](./decisions.md)）。段階1〜10 完了。
+> 状態：計画は承認済み（確定事項は [decisions.md](./decisions.md)）。段階1〜11 完了。
 > 段階1で確定したバージョンは [dev-setup.md](./dev-setup.md) を参照。
 
 ---
@@ -182,7 +182,7 @@ wgc-race-manager/
 | 8 | 操作者・メモ・操作履歴 | Operator/Memo/HistoryService | 名前スナップショット、before/after、UNDO 履歴テスト |
 | 9 | CSV 出力 | CsvService（BOM, CRLF, JST ミリ秒, RFC4180 エスケープ） | 改行・カンマ・日本語を含むゴールデンファイルテスト、削除済み除外 |
 | 10 | 戦略計算エンジン | shared/strategy/* + StrategyService | 平均・データ不足・周回差/時間差分離・停止時間反映・P_req 不成立判定・異常値（0, 負, NaN） |
-| 11 | 警告判定 | warnings.ts | **しきい値・通知方式の確定後に着手**（§20） |
+| 11 | 警告判定 | shared/warnings/detect.ts + WarningService | しきい値は D-057、状態管理は D-059/D-060（完了） |
 | 12 | 異常終了・電源断復旧 | 単一インスタンス、起動時整合性チェック、powerSaveBlocker | プロセス強制終了テスト、WAL 復旧確認、PAUSED 維持 |
 | 13 | 統合テスト | シナリオテスト（模擬レース 1 本を通しで） | 全テスト成功 |
 | 14 | UI 調整・最終検証 | ユーザー決定の UI 実装 | Windows 実機での手動テスト（§18 チェックリスト） |

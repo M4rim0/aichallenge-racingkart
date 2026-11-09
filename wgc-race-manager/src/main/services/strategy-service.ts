@@ -1,6 +1,6 @@
 import { AppError, ErrorCode } from '@shared/errors'
 import { provisionalRule, type RankingRule } from '@shared/race/ranking'
-import { computeStrategy, type StrategyReport } from '@shared/strategy/engine'
+import { computeStrategy, type StrategyInput, type StrategyReport } from '@shared/strategy/engine'
 import type { Repositories } from '../repositories'
 import type { MasterClock } from '../clock/master-clock'
 
@@ -17,6 +17,11 @@ export class StrategyService {
   ) {}
 
   get(eventId: number): StrategyReport {
+    return computeStrategy(this.buildInput(eventId))
+  }
+
+  /** 計算の入力（元データ）。警告サービスが「元データが変わったか」を判定するのにも使う */
+  buildInput(eventId: number): StrategyInput {
     const event = this.repos.events.findById(eventId)
     if (!event) throw new AppError(ErrorCode.EVENT_NOT_FOUND, `大会が見つかりません (id=${eventId})`)
     const teams = this.repos.teams.listByEvent(eventId, { includeDeleted: true }).map((t) => ({
@@ -29,7 +34,7 @@ export class StrategyService {
         .listByTeam(t.id)
         .map((r) => ({ id: r.id, passedAt: r.passedAt }))
     }))
-    return computeStrategy({
+    return {
       now: this.clock.now(),
       status: event.status,
       actualStartAt: event.actualStartAt,
@@ -38,6 +43,6 @@ export class StrategyService {
       stoppages: this.repos.stoppages.listByEvent(eventId).map((s) => ({ startsAt: s.startsAt, endsAt: s.endsAt })),
       teams,
       rule: this.rule
-    })
+    }
   }
 }

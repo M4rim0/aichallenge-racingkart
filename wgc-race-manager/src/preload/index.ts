@@ -85,6 +85,10 @@ const api: WgcApi = {
   },
   strategy: {
     get: (eventId) => invoke(IpcChannel.strategyGet, eventId)
+  },
+  warnings: {
+    evaluate: (eventId) => invoke(IpcChannel.warningsEvaluate, eventId),
+    acknowledge: (eventId, occurrenceId) => invoke(IpcChannel.warningsAcknowledge, eventId, occurrenceId)
   }
 }
 

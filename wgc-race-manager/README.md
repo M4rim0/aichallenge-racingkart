@@ -6,7 +6,7 @@
 - 実装計画: [docs/implementation-plan.md](docs/implementation-plan.md)
 - 確定事項: [docs/decisions.md](docs/decisions.md)
 - 開発環境: [docs/dev-setup.md](docs/dev-setup.md)
-- 設計: [docs/design/](docs/design/)（CSV の列仕様は [csv.md](docs/design/csv.md)、戦略計算は [strategy.md](docs/design/strategy.md)）
+- 設計: [docs/design/](docs/design/)（CSV の列仕様は [csv.md](docs/design/csv.md)、戦略計算は [strategy.md](docs/design/strategy.md)、警告は [warnings.md](docs/design/warnings.md)）
 
 ## 進捗
 
@@ -22,7 +22,8 @@
 | 8 | 操作者・メモ・操作履歴 | 完了 |
 | 9 | CSV 出力 | 完了（予測結果・最終結果 CSV は未確定のため未実装） |
 | 10 | 戦略計算エンジン・強制停止時間 | 完了（警告は段階11） |
-| 11 | 警告判定 | 未着手（しきい値・通知方式の確定待ち） |
-| 12〜14 | | 未着手 |
+| 11 | 警告判定 | 完了（暫定解釈 W-1〜W-11 は要確認） |
+| 12 | 異常終了・電源断復旧 | 未着手 |
+| 13〜14 | | 未着手 |
 
 現在の画面は検証用画面のみです（正式 UI ではありません。決定 D-004）。

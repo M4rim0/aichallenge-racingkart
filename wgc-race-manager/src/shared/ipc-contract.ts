@@ -5,6 +5,7 @@
  */
 import type { Result } from './errors'
 import type { StrategyReport } from './strategy/engine'
+import type { WarningList } from './warnings/types'
 import type { AppSession, LapView, MandatoryStoppage, Memo, Operator, RaceEvent, Team, VehicleData, VehicleDataFields, VehicleDataRow } from './types/entities'
 import type { RaceClockSnapshot } from './time/race-clock'
 import type {
@@ -65,7 +66,9 @@ export const IpcChannel = {
   stoppagesCreate: 'stoppages:create',
   stoppagesUpdate: 'stoppages:update',
   stoppagesDelete: 'stoppages:delete',
-  strategyGet: 'strategy:get'
+  strategyGet: 'strategy:get',
+  warningsEvaluate: 'warnings:evaluate',
+  warningsAcknowledge: 'warnings:acknowledge'
 } as const
 
 export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]
@@ -221,5 +224,11 @@ export interface WgcApi {
   }
   strategy: {
     get(eventId: number): Promise<Result<StrategyReport>>
+  }
+  warnings: {
+    /** 現在の状況で警告を判定し、確認済みを除いた一覧を重要度順に返す（状態はメモリ上のみ） */
+    evaluate(eventId: number): Promise<Result<WarningList>>
+    /** 確認済みにする（一覧から非表示）。発生ごとの occurrenceId を指定する */
+    acknowledge(eventId: number, occurrenceId: string): Promise<Result<null>>
   }
 }

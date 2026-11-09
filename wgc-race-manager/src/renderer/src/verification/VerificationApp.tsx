@@ -9,6 +9,7 @@ import { OperatorsPanel } from './OperatorsPanel'
 import { MemosPanel } from './MemosPanel'
 import { CsvPanel } from './CsvPanel'
 import { StrategyPanel } from './StrategyPanel'
+import { WarningsPanel } from './WarningsPanel'
 
 /**
  * 検証用画面（決定 D-004）。
@@ -52,6 +53,7 @@ export function VerificationApp(): React.JSX.Element {
       <LapsPanel eventId={selected} />
       <VehiclePanel eventId={selected} />
       <CompetitorsPanel eventId={selected} />
+      <WarningsPanel eventId={selected} />
       <StrategyPanel eventId={selected} />
       <MemosPanel eventId={selected} />
       <CsvPanel eventId={selected} />

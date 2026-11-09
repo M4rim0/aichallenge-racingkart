@@ -16,6 +16,7 @@ import { MemoService } from './services/memo-service'
 import { CsvService } from './services/csv-service'
 import { StoppageService } from './services/stoppage-service'
 import { StrategyService } from './services/strategy-service'
+import { WarningService } from './services/warning-service'
 
 export interface AppContext {
   db: Db
@@ -34,6 +35,7 @@ export interface AppContext {
   csv: CsvService
   stoppages: StoppageService
   strategy: StrategyService
+  warnings: WarningService
   undo: UndoService
   /** この起動セッションの情報（PC 時刻異常の有無を含む）。未登録なら null */
   session: AppSession | null
@@ -43,6 +45,7 @@ export interface AppContext {
 export function createAppContext(db: Db, clock: MasterClock, session: AppSession | null = null): AppContext {
   const repos = createRepositories(db, () => clock.now(), clock.bootSessionId)
   const operator = new OperatorContext((id) => repos.operators.findById(id))
+  const strategy = new StrategyService(repos, clock)
   return {
     db,
     repos,
@@ -60,7 +63,8 @@ export function createAppContext(db: Db, clock: MasterClock, session: AppSession
     memos: new MemoService(db, repos, clock, operator),
     csv: new CsvService(repos),
     stoppages: new StoppageService(db, repos, operator),
-    strategy: new StrategyService(repos, clock),
+    strategy,
+    warnings: new WarningService(strategy, clock),
     undo: new UndoService(db, repos, operator)
   }
 }

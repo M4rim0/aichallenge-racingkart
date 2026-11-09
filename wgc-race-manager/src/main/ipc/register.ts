@@ -140,6 +140,14 @@ export function registerIpcHandlers(ctx: AppContext): void {
     return null
   })
   handle(IpcChannel.strategyGet, (eventId: unknown) => ctx.strategy.get(asId(eventId, 'eventId')))
+  handle(IpcChannel.warningsEvaluate, (eventId: unknown) => ctx.warnings.evaluate(asId(eventId, 'eventId')))
+  handle(IpcChannel.warningsAcknowledge, (eventId: unknown, occurrenceId: unknown) => {
+    if (typeof occurrenceId !== 'string' || occurrenceId === '') {
+      throw new AppError(ErrorCode.VALIDATION, '警告が指定されていません')
+    }
+    ctx.warnings.acknowledge(asId(eventId, 'eventId'), occurrenceId)
+    return null
+  })
 }
 
 function asImpact(v: unknown): TeamDeletionImpact {
