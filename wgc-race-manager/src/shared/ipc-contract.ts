@@ -4,7 +4,8 @@
  * データ操作系はすべて Result<T> を返し、例外は投げない。
  */
 import type { Result } from './errors'
-import type { AppSession, LapView, Memo, Operator, RaceEvent, Team, VehicleData, VehicleDataFields, VehicleDataRow } from './types/entities'
+import type { StrategyReport } from './strategy/engine'
+import type { AppSession, LapView, MandatoryStoppage, Memo, Operator, RaceEvent, Team, VehicleData, VehicleDataFields, VehicleDataRow } from './types/entities'
 import type { RaceClockSnapshot } from './time/race-clock'
 import type {
   EventCreateInput,
@@ -59,7 +60,12 @@ export const IpcChannel = {
   memosCreate: 'memos:create',
   memosUpdate: 'memos:update',
   memosDelete: 'memos:delete',
-  csvExport: 'csv:export'
+  csvExport: 'csv:export',
+  stoppagesList: 'stoppages:list',
+  stoppagesCreate: 'stoppages:create',
+  stoppagesUpdate: 'stoppages:update',
+  stoppagesDelete: 'stoppages:delete',
+  strategyGet: 'strategy:get'
 } as const
 
 export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]
@@ -205,5 +211,15 @@ export interface WgcApi {
   csv: {
     /** 保存先フォルダをダイアログで選び、その下の <大会ID>_<大会名> に 5 ファイルを出力する（D-041） */
     export(eventId: number): Promise<Result<CsvExportResult>>
+  }
+  stoppages: {
+    list(eventId: number): Promise<Result<MandatoryStoppage[]>>
+    /** endsAt = null は終了未定 */
+    create(eventId: number, startsAt: number, endsAt: number | null): Promise<Result<MandatoryStoppage>>
+    update(id: number, startsAt: number, endsAt: number | null): Promise<Result<MandatoryStoppage>>
+    delete(id: number): Promise<Result<null>>
+  }
+  strategy: {
+    get(eventId: number): Promise<Result<StrategyReport>>
   }
 }

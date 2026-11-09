@@ -131,6 +131,15 @@ export function registerIpcHandlers(ctx: AppContext): void {
     if (r.canceled || !dir) return { cancelled: true }
     return { cancelled: false, ...ctx.csv.exportTo(dir, id) }
   })
+
+  handle(IpcChannel.stoppagesList, (eventId: unknown) => ctx.stoppages.list(asId(eventId, 'eventId')))
+  handle(IpcChannel.stoppagesCreate, (eventId: unknown, s: unknown, e: unknown) => ctx.stoppages.create(asId(eventId, 'eventId'), s, e))
+  handle(IpcChannel.stoppagesUpdate, (id: unknown, s: unknown, e: unknown) => ctx.stoppages.update(asId(id), s, e))
+  handle(IpcChannel.stoppagesDelete, (id: unknown) => {
+    ctx.stoppages.delete(asId(id))
+    return null
+  })
+  handle(IpcChannel.strategyGet, (eventId: unknown) => ctx.strategy.get(asId(eventId, 'eventId')))
 }
 
 function asImpact(v: unknown): TeamDeletionImpact {

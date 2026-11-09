@@ -76,6 +76,15 @@ const api: WgcApi = {
   },
   csv: {
     export: (eventId) => invoke(IpcChannel.csvExport, eventId)
+  },
+  stoppages: {
+    list: (eventId) => invoke(IpcChannel.stoppagesList, eventId),
+    create: (eventId, s, e) => invoke(IpcChannel.stoppagesCreate, eventId, s, e),
+    update: (id, s, e) => invoke(IpcChannel.stoppagesUpdate, id, s, e),
+    delete: (id) => invoke(IpcChannel.stoppagesDelete, id)
+  },
+  strategy: {
+    get: (eventId) => invoke(IpcChannel.strategyGet, eventId)
   }
 }
 

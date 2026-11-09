@@ -14,6 +14,8 @@ import { VehicleDataService } from './services/vehicle-data-service'
 import { OperatorService } from './services/operator-service'
 import { MemoService } from './services/memo-service'
 import { CsvService } from './services/csv-service'
+import { StoppageService } from './services/stoppage-service'
+import { StrategyService } from './services/strategy-service'
 
 export interface AppContext {
   db: Db
@@ -30,6 +32,8 @@ export interface AppContext {
   operators: OperatorService
   memos: MemoService
   csv: CsvService
+  stoppages: StoppageService
+  strategy: StrategyService
   undo: UndoService
   /** この起動セッションの情報（PC 時刻異常の有無を含む）。未登録なら null */
   session: AppSession | null
@@ -55,6 +59,8 @@ export function createAppContext(db: Db, clock: MasterClock, session: AppSession
     operators: new OperatorService(db, repos, operator),
     memos: new MemoService(db, repos, clock, operator),
     csv: new CsvService(repos),
+    stoppages: new StoppageService(db, repos, operator),
+    strategy: new StrategyService(repos, clock),
     undo: new UndoService(db, repos, operator)
   }
 }

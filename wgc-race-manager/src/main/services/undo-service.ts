@@ -11,7 +11,7 @@ import { assertAfterStart, assertKeepsOrder, assertNoDuplicate } from './pass-re
  * UNDO（直前操作の取り消し、決定 D-017）。
  *
  * - 単位：1 回の操作（operation_group）。大会内で最も新しい、未取り消しの対象操作を取り消す。複数段階可
- * - 対象：自チームラップ・他チーム通過・車両データ・メモ・チーム。時計の状態遷移・大会情報は対象外
+ * - 対象：自チームラップ・他チーム通過・車両データ・メモ・チーム・強制停止時間（D-044）。時計の状態遷移・大会情報・操作者は対象外
  * - REDO なし：UNDO 自体は取り消せない（UNDO の操作は飛ばして、その前の操作が次の対象になる）
  * - 整合性確認：対象行の現在値が、その操作の直後の値（after）と完全に一致する場合のみ戻す。
  *   後続の変更がある場合や、戻すと規則（重複・順序・自チーム一意など）に反する場合は取り消さない
@@ -19,7 +19,7 @@ import { assertAfterStart, assertKeepsOrder, assertNoDuplicate } from './pass-re
  * - 古い操作を飛ばして取り消すことはしない（最新の対象操作が取り消せない場合はエラー）
  */
 
-export const UNDOABLE_TABLES = ['lap_records', 'competitor_passes', 'vehicle_data', 'memos', 'teams'] as const
+export const UNDOABLE_TABLES = ['lap_records', 'competitor_passes', 'vehicle_data', 'memos', 'teams', 'mandatory_stoppages'] as const
 type UndoableTable = (typeof UNDOABLE_TABLES)[number]
 
 export interface UndoCandidate {
@@ -36,7 +36,8 @@ const TABLE_LABEL: Record<UndoableTable, string> = {
   competitor_passes: '他チーム通過記録',
   vehicle_data: '車両データ',
   memos: 'メモ',
-  teams: 'チーム'
+  teams: 'チーム',
+  mandatory_stoppages: '強制停止時間'
 }
 const ACTION_LABEL: Record<HistoryAction, string> = { CREATE: '追加', UPDATE: '編集', DELETE: '削除', UNDO: '取り消し' }
 
@@ -195,7 +196,8 @@ export class UndoService {
       competitor_passes: this.repos.competitorPasses,
       vehicle_data: this.repos.vehicleData,
       memos: this.repos.memos,
-      teams: this.repos.teams
+      teams: this.repos.teams,
+      mandatory_stoppages: this.repos.stoppages
     }
     return map[table] as unknown as BaseRepository<{ id: number }, never, never>
   }

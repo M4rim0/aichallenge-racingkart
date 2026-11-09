@@ -1,4 +1,4 @@
-import type { ClockTransitionKind, EventStatus, MandatoryStoppage } from '../types/entities'
+import type { ClockTransitionKind, EventStatus } from '../types/entities'
 
 /**
  * レース時計の計算（純粋関数）。
@@ -119,14 +119,4 @@ export const NEXT_STATUS: Readonly<Record<ClockTransitionKind, EventStatus>> = {
   END: 'FINISHED'
 }
 
-/**
- * 強制停止時間を戦略計算へ組み込むための拡張点（D-014）。
- * 段階10で「今後の強制停止時間 S_remaining」の算出をここに実装し、
- * R_drive = R_clock − S_remaining（仕様 §8.5）として使う。
- * 段階4では強制停止時間を扱わないため、未実装であることを明示する。
- */
-export type RemainingStoppageCalculator = (
-  stoppages: readonly Pick<MandatoryStoppage, 'startsAt' | 'endsAt'>[],
-  now: number,
-  scheduledEndAt: number
-) => number
+// 強制停止時間の戦略計算への組み込みは src/shared/strategy/stoppages.ts（段階10、D-044〜D-046）
