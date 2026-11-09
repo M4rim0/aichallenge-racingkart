@@ -17,6 +17,19 @@ export function handle<A extends unknown[], T>(channel: string, fn: (...args: A)
   })
 }
 
+/** 非同期処理（ダイアログ等）を含むハンドラ */
+export function handleAsync<A extends unknown[], T>(channel: string, fn: (...args: A) => Promise<T>): void {
+  ipcMain.handle(channel, async (_event, ...args: unknown[]): Promise<Result<T>> => {
+    try {
+      return { ok: true, value: await fn(...(args as A)) }
+    } catch (e) {
+      if (e instanceof AppError) return { ok: false, error: e.toPayload() }
+      console.error(`[ipc:${channel}]`, e)
+      return { ok: false, error: { code: ErrorCode.INTERNAL, message: '内部エラーが発生しました' } }
+    }
+  })
+}
+
 /** Renderer から渡された ID を検証する */
 export function asId(v: unknown, field = 'id'): number {
   if (typeof v !== 'number' || !Number.isSafeInteger(v) || v <= 0) {

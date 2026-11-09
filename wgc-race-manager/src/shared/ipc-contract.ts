@@ -58,7 +58,8 @@ export const IpcChannel = {
   memosList: 'memos:list',
   memosCreate: 'memos:create',
   memosUpdate: 'memos:update',
-  memosDelete: 'memos:delete'
+  memosDelete: 'memos:delete',
+  csvExport: 'csv:export'
 } as const
 
 export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]
@@ -125,6 +126,8 @@ export interface Standings {
   provisional: boolean
   rows: StandingRow[]
 }
+
+export type CsvExportResult = { cancelled: true } | { cancelled: false; directory: string; files: string[] }
 
 /** preload が window.wgc として公開する API */
 export interface WgcApi {
@@ -198,5 +201,9 @@ export interface WgcApi {
     create(eventId: number, body: string): Promise<Result<Memo>>
     update(id: number, body: string): Promise<Result<Memo>>
     delete(id: number): Promise<Result<null>>
+  }
+  csv: {
+    /** 保存先フォルダをダイアログで選び、その下の <大会ID>_<大会名> に 5 ファイルを出力する（D-041） */
+    export(eventId: number): Promise<Result<CsvExportResult>>
   }
 }

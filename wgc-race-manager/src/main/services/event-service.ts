@@ -42,7 +42,7 @@ export class EventService {
       const created = this.repos.events.insert({ ...input, status: 'PREPARING' })
       return {
         result: created,
-        changes: [{ action: 'CREATE', targetTable: 'events', targetId: created.id, before: null, after: created }]
+        changes: [{ action: 'CREATE', targetTable: 'events', targetId: created.id, before: null, after: created, eventId: created.id }]
       }
     })
   }

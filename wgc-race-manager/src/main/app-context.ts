@@ -13,6 +13,7 @@ import { StandingsService } from './services/standings-service'
 import { VehicleDataService } from './services/vehicle-data-service'
 import { OperatorService } from './services/operator-service'
 import { MemoService } from './services/memo-service'
+import { CsvService } from './services/csv-service'
 
 export interface AppContext {
   db: Db
@@ -28,6 +29,7 @@ export interface AppContext {
   vehicleData: VehicleDataService
   operators: OperatorService
   memos: MemoService
+  csv: CsvService
   undo: UndoService
   /** この起動セッションの情報（PC 時刻異常の有無を含む）。未登録なら null */
   session: AppSession | null
@@ -52,6 +54,7 @@ export function createAppContext(db: Db, clock: MasterClock, session: AppSession
     vehicleData: new VehicleDataService(db, repos, operator),
     operators: new OperatorService(db, repos, operator),
     memos: new MemoService(db, repos, clock, operator),
+    csv: new CsvService(repos),
     undo: new UndoService(db, repos, operator)
   }
 }

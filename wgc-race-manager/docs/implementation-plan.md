@@ -1,7 +1,7 @@
 # 実装計画・ディレクトリ構成案（v0.1 対応）
 
 > 基準文書：[spec-v0.1.md](./spec-v0.1.md)
-> 状態：計画は承認済み（確定事項は [decisions.md](./decisions.md)）。段階1〜8 完了。
+> 状態：計画は承認済み（確定事項は [decisions.md](./decisions.md)）。段階1〜9 完了。
 > 段階1で確定したバージョンは [dev-setup.md](./dev-setup.md) を参照。
 
 ---

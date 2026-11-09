@@ -17,6 +17,8 @@ export interface AuditedChange<T> {
   after: T | null
   undoOfHistoryId?: number | null
   note?: string | null
+  /** 履歴に記録する大会 ID（省略時は AuditContext の eventId）。大会の作成時など、ID が操作中に決まる場合に使う */
+  eventId?: number | null
 }
 
 /**
@@ -37,7 +39,7 @@ export function runAudited<R, T>(
       const operationGroup = randomUUID()
       for (const c of changes) {
         repos.history.record({
-          eventId: ctx.eventId,
+          eventId: c.eventId !== undefined ? c.eventId : ctx.eventId,
           operator: ctx.operator,
           action: c.action,
           targetTable: c.targetTable,

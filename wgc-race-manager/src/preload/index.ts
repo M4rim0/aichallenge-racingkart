@@ -73,6 +73,9 @@ const api: WgcApi = {
     create: (eventId, body) => invoke(IpcChannel.memosCreate, eventId, body),
     update: (id, body) => invoke(IpcChannel.memosUpdate, id, body),
     delete: (id) => invoke(IpcChannel.memosDelete, id)
+  },
+  csv: {
+    export: (eventId) => invoke(IpcChannel.csvExport, eventId)
   }
 }
 

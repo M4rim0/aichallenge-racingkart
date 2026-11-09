@@ -43,7 +43,7 @@ describe('EventService (spec §3.1)', () => {
     expect(e).toMatchObject({ status: 'PREPARING', actualStartAt: null, actualEndAt: null, lapDistanceM: 5807 })
     const h = t.repos.history.listAll()
     expect(h).toHaveLength(1)
-    expect(h[0]).toMatchObject({ action: 'CREATE', targetTable: 'events', targetId: e.id })
+    expect(h[0]).toMatchObject({ action: 'CREATE', targetTable: 'events', targetId: e.id, eventId: e.id })
   })
 
   it('validates input', () => {

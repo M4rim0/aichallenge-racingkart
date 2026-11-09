@@ -1,11 +1,11 @@
-import { app, ipcMain } from 'electron'
-import { IpcChannel, type AppInfo, type ClockStatus, type TeamDeletionImpact } from '@shared/ipc-contract'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { IpcChannel, type AppInfo, type ClockStatus, type CsvExportResult, type TeamDeletionImpact } from '@shared/ipc-contract'
 import { AppError, ErrorCode } from '@shared/errors'
 import type { EventCreateInput, EventUpdateInput, TeamCreateInput, TeamUpdateInput } from '@shared/validation/event-team'
 import { probeSqliteVersion } from '../db/sqlite-probe'
 import { getAppDatabase } from '../db/app-database'
 import type { AppContext } from '../app-context'
-import { asId, asObject, handle } from './handle'
+import { asId, asObject, handle, handleAsync } from './handle'
 
 export function registerIpcHandlers(ctx: AppContext): void {
   ipcMain.handle(IpcChannel.appGetInfo, (): AppInfo => {
@@ -116,6 +116,20 @@ export function registerIpcHandlers(ctx: AppContext): void {
   handle(IpcChannel.memosDelete, (id: unknown) => {
     ctx.memos.delete(asId(id))
     return null
+  })
+
+  handleAsync(IpcChannel.csvExport, async (eventId: unknown): Promise<CsvExportResult> => {
+    const id = asId(eventId, 'eventId')
+    ctx.events.get(id) // 大会の存在確認（ダイアログを開く前に）
+    const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+    const options: Electron.OpenDialogOptions = {
+      title: 'CSV の保存先フォルダを選択',
+      properties: ['openDirectory', 'createDirectory']
+    }
+    const r = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+    const dir = r.filePaths[0]
+    if (r.canceled || !dir) return { cancelled: true }
+    return { cancelled: false, ...ctx.csv.exportTo(dir, id) }
   })
 }
 

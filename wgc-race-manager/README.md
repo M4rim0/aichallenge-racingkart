@@ -6,7 +6,7 @@
 - 実装計画: [docs/implementation-plan.md](docs/implementation-plan.md)
 - 確定事項: [docs/decisions.md](docs/decisions.md)
 - 開発環境: [docs/dev-setup.md](docs/dev-setup.md)
-- 設計提案: [docs/design/](docs/design/)
+- 設計: [docs/design/](docs/design/)（CSV の列仕様は [csv.md](docs/design/csv.md)）
 
 ## 進捗
 
@@ -19,8 +19,9 @@
 | 5 | 自チームラップ記録・UNDO | 完了 |
 | 6 | 他チーム通過記録・暫定順位 | 完了 |
 | 7 | 車両データ入力 | 完了 |
-| 8 | 操作者・メモ・操作履歴 | 完了（履歴の CSV 出力は段階9） |
-| 9 | CSV 出力 | 未着手 |
-| 10〜14 | | 未着手 |
+| 8 | 操作者・メモ・操作履歴 | 完了 |
+| 9 | CSV 出力 | 完了（予測結果・最終結果 CSV は未確定のため未実装） |
+| 10 | 戦略計算エンジン | 未着手 |
+| 11〜14 | | 未着手 |
 
 現在の画面は検証用画面のみです（正式 UI ではありません。決定 D-004）。
